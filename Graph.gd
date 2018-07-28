@@ -227,3 +227,30 @@ func update_vertex_indices():
 	for vert in vertices:
 		vert.index = ind
 		ind += 1
+
+func generate_mesh(offset):
+
+	set_height_features(offset.x, offset.z)
+
+	var mesh = Mesh.new()
+	var surfTool = SurfaceTool.new()
+
+	var color_scale = (2.0 / (max_height - min_height))
+			
+	surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for tri in triangles:
+		add_coloured_vertex(surfTool, tri.v1.pos, color_scale)
+		add_coloured_vertex(surfTool, tri.v3.pos, color_scale)
+		add_coloured_vertex(surfTool, tri.v2.pos, color_scale)
+	
+	surfTool.generate_normals()
+	surfTool.commit(mesh)
+	return mesh
+
+func add_coloured_vertex(surfTool, pos, color_scale):
+	var height = pos.y
+	var red   = max(((height - min_height) * color_scale) - 1.0, 0.0)
+	var green = min( (height - min_height) * color_scale, 1.0)
+	var blue  = max(((height - min_height) * color_scale) - 1.0, 0.0)
+	surfTool.add_color(Color(red, green, blue, 1.0))
+	surfTool.add_vertex(pos)
