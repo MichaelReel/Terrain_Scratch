@@ -11,8 +11,11 @@ var scale
 
 # Some fields used to track limits
 # Set with some reasonable defaults and update later
-var min_height = 0.0
-var max_height = 1.5
+var min_height = -0.5
+var max_height = 1.6
+
+var real_min_height = min_height
+var real_max_height = max_height
 
 class Vertex:
 	var pos    # Vector3
@@ -217,8 +220,9 @@ func set_height_features(x_offset = 0.0, z_offset = 0.0):
 	for v in vertices:
 		var new_height = hash_tool.getHash((v.pos.x + x_offset) * scale, (v.pos.z + z_offset) * scale)
 		v.set_height(new_height)
-		min_height = min(min_height, new_height)
-		max_height = max(max_height, new_height)
+		real_min_height = min(real_min_height, new_height)
+		real_max_height = max(real_max_height, new_height)
+	
 
 func update_vertex_indices():
 	# Vertices should already be ordered and unique

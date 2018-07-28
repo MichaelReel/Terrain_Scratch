@@ -31,23 +31,18 @@ class ContinentalDome:
 
 func _init(shelf_limit):
 	island_limiter = ContinentalDome.new(shelf_limit)
-	variation_hash = Perlin.new(16.0, 16.0, 16.0, 1.0)
+	variation_hash = Perlin.new(shelf_limit / 2, shelf_limit / 2, shelf_limit / 2, 1.0)
 	hashes = [
-		Perlin.new(1.0, 1.0, 1.0, 1.0),
-		Perlin.new(0.25, 0.25, 0.25, 1.0),
-		Perlin.new(0.0625, 0.0625, 0.0625, 1.0),
-		# Perlin.new(0.03125, 0.03125, 1.0, 1.0),
-		# Perlin.new(0.0078125, 0.0078125, 1.0, 1.0),
+		Perlin.new(1.0, 1.0, 1.0, 1.0 / 32.0),
+		Perlin.new(1.0, 1.0, 1.0, 1.0 / 8.0),
+		Perlin.new(1.0, 1.0, 1.0, 1.0 / 2.0),
 	]
 
-	base_height = 1
-	start_amp = 0.25
-	amp_multiplier = 0.125
-
 func getHash(x, y):
-	var new_height = base_height
-	var amp = start_amp
+	var amp_multiplier = variation_hash.getHash(x, y)
+	var new_height = island_limiter.getHash(x, y)
+	var amp = variation_hash.getHash(x, y)
 	for p in hashes:
 		new_height += p.getHash(x, y) * amp
 		amp *= amp_multiplier
-	return new_height * (variation_hash.getHash(x, y) + 1.0) * island_limiter.getHash(x, y)
+	return new_height

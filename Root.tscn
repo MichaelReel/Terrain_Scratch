@@ -1,7 +1,8 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://TerrainDemo.gd" type="Script" id=1]
-[ext_resource path="res://CameraControl.gd" type="Script" id=2]
+[ext_resource path="res://Land.material" type="Material" id=2]
+[ext_resource path="res://CameraControl.gd" type="Script" id=3]
 
 [sub_resource type="PlaneMesh" id=1]
 
@@ -11,24 +12,23 @@ subdivide_width = 0
 subdivide_depth = 0
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="Shader" id=2]
+[sub_resource type="Shader" id=5]
 
 code = "shader_type spatial;
 
 void fragment() {
-	ALBEDO = COLOR.rgb;
-	float thinness = 10000.0;
+	ALBEDO = vec3(0.0, 0.0, 0.25);
+	float thinness = 10.0;
 	float alpha_x = max(1.0 / (thinness * UV.x), -1.0 / (thinness * (UV.x - 1.0)));
 	float alpha_y = max(1.0 / (thinness * UV.y), -1.0 / (thinness * (UV.y - 1.0)));
 	float alpha = max(alpha_x, alpha_y);
 	ALPHA = alpha;
 }"
-_sections_unfolded = [ "Resource" ]
 
 [sub_resource type="ShaderMaterial" id=3]
 
 render_priority = 0
-shader = SubResource( 2 )
+shader = SubResource( 5 )
 _sections_unfolded = [ "Resource" ]
 
 [sub_resource type="CapsuleShape" id=4]
@@ -54,14 +54,14 @@ mesh = SubResource( 1 )
 skeleton = NodePath("..")
 material/0 = SubResource( 3 )
 script = ExtResource( 1 )
-_sections_unfolded = [ "Transform" ]
+_sections_unfolded = [ "Transform", "material" ]
 chunk_resolution = Vector2( 16, 16 )
 chunks_grid = Vector2( 16, 16 )
-chunk_material = null
+chunk_material = ExtResource( 2 )
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
-transform = Transform( 1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 16, 16, 0 )
+transform = Transform( -1, 6.18173e-008, -6.18173e-008, 0, 0.707107, 0.707107, 8.74228e-008, 0.707107, -0.707107, 16, 16, 0 )
 layers = 1
 light_color = Color( 1, 1, 1, 1 )
 light_energy = 1.0
@@ -101,7 +101,7 @@ axis_lock_angular_x = false
 axis_lock_angular_y = false
 axis_lock_angular_z = false
 collision/safe_margin = 0.001
-script = ExtResource( 2 )
+script = ExtResource( 3 )
 _sections_unfolded = [ "Transform" ]
 
 [node name="CameraMount" type="Spatial" parent="CameraControl" index="0"]

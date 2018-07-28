@@ -11,11 +11,14 @@ export (Vector2) var chunk_resolution = Vector2(16.0, 16.0) # The number of poin
 export (Vector2) var chunks_grid = Vector2(16, 16)          # Size of the grid of chunks
 export (ShaderMaterial) var chunk_material
 var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
-var graph                                                   # Used to generate meshes 
+var graph                                                   # Used to generate meshes
+var force_generation = true
 
 func _ready():
 	prepare_storage()
 	load_index()
+	if force_generation:
+		remove_all_files()
 	update_terrain()
 	create_colliders()
 	save_chunks()
@@ -31,6 +34,16 @@ func prepare_storage():
 		print ("Making new terrain directory")
 		save_dir.make_dir_recursive(save_dir_path)
 		save_dir.open(save_dir_path)
+
+func remove_all_files():
+	# This is more for debug than anything
+	var dir = Directory.new()
+	dir.remove(save_dir.get_current_dir() + "/index.json")
+	for chunk_name in index["Chunks"].keys():
+		if index["Chunks"][chunk_name].has("file"):
+			dir.remove(save_dir.get_current_dir() + "/" + index["Chunks"][chunk_name]["file"] )
+			index["Chunks"][chunk_name].erase("file")
+
 
 func load_index():
 	var index_file = save_dir.get_current_dir() + "/index.json"
@@ -59,7 +72,7 @@ func load_index():
 	index["Loads"] += 1
 	
 func update_terrain():
-	var shelf_limit = 21.0
+	var shelf_limit = 100.0
 	graph = Graph.new(HeightHash.new(shelf_limit), 2 * shelf_limit)
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()
@@ -74,6 +87,17 @@ func update_terrain():
 			else:
 				index["Chunks"][chunk_name] = {}
 				index["Chunks"][chunk_name]["data"] = generate_chunk(x, z)
+	
+	# Some debug relating to shader ranges:
+	var cmin = graph.min_height
+	var cmax = graph.max_height
+	var rmin = graph.real_min_height
+	var rmax = graph.real_max_height
+	if rmin < cmin:
+		print ("real min height is: " + str(rmin) + ", current: " + str(cmin))
+	if rmax > cmax:
+		print ("real max height is: " + str(rmax) + ", current: " + str(cmax))
+			
 
 func generate_chunk(x, z):
 
