@@ -7,12 +7,13 @@ var terrain_path = "TerrainDemo"
 var save_dir
 var index
 
-export (Vector2) var chunk_resolution = Vector2(16.0, 16.0) # The number of points across the grid
-export (Vector2) var chunks_grid = Vector2(16, 16)          # Size of the grid of chunks
+export (Vector2) var chunk_resolution = Vector2(32.0, 32.0) # The number of points across the grid
+export (Vector2) var chunks_grid = Vector2(8, 8)            # Size of the grid of chunks
 export (ShaderMaterial) var chunk_material
+export (bool) var force_generation = true
 var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var graph                                                   # Used to generate meshes
-var force_generation = true
+
 
 func _ready():
 	prepare_storage()
@@ -73,7 +74,7 @@ func load_index():
 	
 func update_terrain():
 	var shelf_limit = 100.0
-	graph = Graph.new(HeightHash.new(shelf_limit), 2 * shelf_limit)
+	graph = Graph.new(HeightHash.new(shelf_limit, 2), 2 * shelf_limit)
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()
 

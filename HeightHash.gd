@@ -8,11 +8,7 @@ var Perlin = load("res://PerlinRef.gd")
 
 var variation_hash
 var island_limiter
-
 var hashes
-var base_height
-var start_amp
-var amp_multiplier
 
 class ContinentalDome:
 	var r
@@ -29,13 +25,18 @@ class ContinentalDome:
 
 		return y / 2.0
 
-func _init(shelf_limit):
+func _init(shelf_limit, rseed = 0):
+	print ("Base rseed: " + str(rseed))
+	seed(rseed)
+	print ("First rand: " + str(randi()))
+	var hash_seeds = [randi(), randi(), randi(), randi(), randi()]
 	island_limiter = ContinentalDome.new(shelf_limit)
-	variation_hash = Perlin.new(shelf_limit / 2, shelf_limit / 2, shelf_limit / 2, 1.0)
+	variation_hash = Perlin.new(7.0 / shelf_limit, hash_seeds[4])
 	hashes = [
-		Perlin.new(1.0, 1.0, 1.0, 1.0 / 32.0),
-		Perlin.new(1.0, 1.0, 1.0, 1.0 / 8.0),
-		Perlin.new(1.0, 1.0, 1.0, 1.0 / 2.0),
+		Perlin.new(1.0 / 29.0, hash_seeds[0]),
+		Perlin.new(1.0 / 17.0, hash_seeds[1]),
+		Perlin.new(1.0 / 7.0, hash_seeds[2]),
+		Perlin.new(1.0 / 3.0, hash_seeds[3]),
 	]
 
 func getHash(x, y):

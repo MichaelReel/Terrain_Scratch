@@ -7,19 +7,20 @@ var dx
 var dy
 var dz
 
-func _init(width = 1, height = 1, depth = 1, zoom = 1):
+func _init(zoom, rseed = 0):
+	print ("rseed: " + str(rseed))
 	self.p = []
 	self.min_hash = 0.0
 	self.max_hash = 0.0
-	self.dx = float(zoom) / width
-	self.dy = float(zoom) / height
-	self.dz = float(zoom) / depth
-	var permutation = self.getPermutation()
+	self.dx = float(zoom)
+	self.dy = float(zoom)
+	self.dz = float(zoom)
+	var permutation = self.getPermutation(rseed)
 	for i in range(512):
 	    self.p.append(permutation[i % permutation.size()])
 
-func getPermutation():
-	return [
+func getPermutation(rseed):
+	var perm = [
 		151,160,137, 91, 90, 15,131, 13,201, 95, 96, 53,194,233,  7,225,
 		140, 36,103, 30, 69,142,  8, 99, 37,240, 21, 10, 23,190,  6,148,
 		247,120,234, 75,  0, 26,197, 62, 94,252,219,203,117, 35, 11, 32,
@@ -37,6 +38,19 @@ func getPermutation():
 		184, 84,204,176,115,121, 50, 45,127,  4,150,254,138,236,205, 93,
 		222,114, 67, 29, 24, 72,243,141,128,195, 78, 66,215, 61,156,180,
 	]
+	seed(rseed)
+	print ("First rand: " + str(randi()))
+	# perm.shuffle(): not implemented quite yet, should replace:
+	var pl = len(perm)
+	var o_ind
+	var t
+	for t_ind in range(pl):
+		o_ind = randi() % pl
+		t = perm[t_ind]
+		perm[t_ind] = perm[o_ind]
+		perm[o_ind] = t
+
+	return perm
 
 func getFloatHash(x, y, z = 0):
 	var X = int(floor(x)) & 255             # FIND UNIT CUBE THAT

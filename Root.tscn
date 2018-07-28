@@ -18,11 +18,7 @@ code = "shader_type spatial;
 
 void fragment() {
 	ALBEDO = vec3(0.0, 0.0, 0.25);
-	float thinness = 10.0;
-	float alpha_x = max(1.0 / (thinness * UV.x), -1.0 / (thinness * (UV.x - 1.0)));
-	float alpha_y = max(1.0 / (thinness * UV.y), -1.0 / (thinness * (UV.y - 1.0)));
-	float alpha = max(alpha_x, alpha_y);
-	ALPHA = alpha;
+	ALPHA = 0.9;
 }"
 
 [sub_resource type="ShaderMaterial" id=3]
@@ -40,7 +36,7 @@ height = 2.0
 
 [node name="TerrainDemo" type="MeshInstance" parent="." index="0"]
 
-transform = Transform( 100, 0, 0, 0, 20, 0, 0, 0, 100, 0, 0, 0 )
+transform = Transform( 1024, 0, 0, 0, 128, 0, 0, 0, 1024, 0, 0, 0 )
 layers = 1
 material_override = null
 cast_shadow = 1
@@ -55,15 +51,16 @@ skeleton = NodePath("..")
 material/0 = SubResource( 3 )
 script = ExtResource( 1 )
 _sections_unfolded = [ "Transform", "material" ]
-chunk_resolution = Vector2( 16, 16 )
-chunks_grid = Vector2( 16, 16 )
+chunk_resolution = Vector2( 32, 32 )
+chunks_grid = Vector2( 8, 8 )
 chunk_material = ExtResource( 2 )
+force_generation = true
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
 transform = Transform( -1, 6.18173e-008, -6.18173e-008, 0, 0.707107, 0.707107, 8.74228e-008, 0.707107, -0.707107, 16, 16, 0 )
 layers = 1
-light_color = Color( 1, 1, 1, 1 )
+light_color = Color( 0.974685, 0.976563, 0.736237, 1 )
 light_energy = 1.0
 light_indirect_energy = 1.0
 light_negative = false
@@ -89,7 +86,7 @@ _sections_unfolded = [ "Transform" ]
 
 [node name="CameraControl" type="KinematicBody" parent="." index="2"]
 
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 0 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 128, 0 )
 input_ray_pickable = true
 input_capture_on_drag = false
 collision_layer = 1
@@ -121,7 +118,7 @@ current = false
 fov = 70.0
 size = 1.0
 near = 0.05
-far = 100.0
+far = 1024.0
 _sections_unfolded = [ "Transform" ]
 
 [node name="CollisionShape" type="CollisionShape" parent="CameraControl" index="1"]
