@@ -1,13 +1,15 @@
 extends Object
 
-const EPSILON = 0.0000001
-
-var vertices
-var edges
-var triangles
+var vertex_grid
+var quads
 
 var hash_tool
 var scale
+
+var world_width   # The total width of the terrain
+var world_breadth # The total breadth of the terrain
+var height_grid   # The fullset of height values across the grid
+var water_grid    # The fullset of water values across the grid
 
 # Some fields used to track limits
 # Set with some reasonable defaults and update later
@@ -17,236 +19,145 @@ var max_height = 1.6
 var real_min_height = min_height
 var real_max_height = max_height
 
-class Vertex:
-	var pos    # Vector3
-	var index
+class Quad:
+	var v1_x
+	var v1_z
+	var v2_x
+	var v2_z
 
-	# parent references
-	var edges      # Array of Edge
-	var tris       # Array of parent Triangle
-	var connectors # Array of connected vertices
-
-	func _init(vertex):
-		pos        = vertex
-		edges      = []
-		tris       = []
-		connectors = []
-
-	static func sort(a, b):
-		# Sort by z then x then y
-		if a.pos.z > b.pos.z: 
-			return true
-		elif a.pos.z == b.pos.z:
-			if a.pos.x < b.pos.x:
-				return true
-			elif a.pos.x == b.pos.x:
-				if a.pos.y < b.pos.y:
-					return true
-		return false
+	func _init(vert1_x, vert1_z, vert2_x, vert2_z):
+		v1_x = vert1_x
+		v1_z = vert1_z
+		v2_x = vert2_x
+		v2_z = vert2_z
 	
-	func equals(b):
-		return pos.distance_to(b.pos) < EPSILON
-
-	static func make_clockwise(vl):
-		assert(len(vl) == 3)
-		var area2 = (vl[1].pos.x - vl[0].pos.x) * (vl[2].pos.z - vl[0].pos.z) - (vl[1].pos.z - vl[0].pos.z) * (vl[2].pos.x - vl[0].pos.x)
-		if area2 > 0:
-			var tmp = vl[2]
-			vl[2] = vl[1]
-			vl[1] = tmp
-
-	static func place_vertex_in_list(list, v):
-		var v_ind = list.bsearch_custom(v, v, "sort")
-		if v_ind >= 0 and v_ind < len(list) and v.equals(list[v_ind]):
-			v = list[v_ind]
-		else:
-			list.insert(v_ind, v)
-		return v
-
-	func set_height(new_height):
-		pos.y = new_height
-
-class Edge:
-	var v1    # Vertex
-	var v2    # Vertex
-
-	# parent references
-	var tris       # Array of parent Triangle
-
-	func _init(vert1, vert2):
-		# Add the vertices in sorted order
-		# This simplifies equality test
-		if Vertex.sort(vert1, vert2):
-			v1 = vert1
-			v2 = vert2
-		else:
-			v1 = vert2
-			v2 = vert1
-
-		# Update joined vertices:
-		place_edge_in_list(v1.edges, self)
-		Vertex.place_vertex_in_list(v1.connectors, v2)
-		place_edge_in_list(v2.edges, self)
-		Vertex.place_vertex_in_list(v2.connectors, v1)
-
-		# Initialise triangle list
-		tris   = []
-
-	static func sort(a, b):
-		# Sort by first vertex first - vertices should already be sorted
-		if Vertex.sort(a.v1, b.v1):
-			return true
-		elif (a.v1.equals(b.v1)):
-			if Vertex.sort(a.v2, b.v2):
-				return true
-		return false
+	#      v1_x  v2_x
+	#        '     '
+	# v1_z-  A-----B
+	#        | \   |
+	#        |   \ |
+	# v2_z-  C-----D
 	
-	func equals(b):
-		# This assumes vertices are in sorted order
-		return v1.equals(b.v1) and v2.equals(b.v2)
+	func A(grid):
+		return grid[v1_z][v1_x]
 		
-	static func place_edge_in_list(list, e):
-		var e_ind = list.bsearch_custom(e, e, "sort")
-		if e_ind >= 0 and e_ind < len(list) and e.equals(list[e_ind]):
-			e = list[e_ind]
-		else:
-			list.insert(e_ind, e)
-		return e
+	func B(grid):
+		return grid[v1_z][v2_x]
+		
+	func C(grid):
+		return grid[v2_z][v1_x]
 
-class Triangle:
-	var e1
-	var e2
-	var e3
-	var v1
-	var v2
-	var v3
+	func D(grid):
+		return grid[v2_z][v2_x]
 
-	func _init(edge1, edge2, edge3, vert1, vert2, vert3):
-		e1 = edge1
-		e2 = edge2
-		e3 = edge3
-		v1 = vert1
-		v2 = vert2
-		v3 = vert3
-		for c in [edge1, edge2, edge3, vert1, vert2, vert3]:
-			place_triangle_in_list(c.tris, self)
-	
-	static func sort(a, b):
-		# Sort by first edge first - edges will already be in order
-		if Edge.sort(a.e1, b.e1):
-			return true
-		elif a.e1.equals(b.e1):
-			if Edge.sort(a.e2, b.e2):
-				return true
-			elif a.e2.equals(b.e2):
-				if Edge.sort(a.e3, b.e3):
-					return true
-		return false
+# Utility function, could maybe be libraried off
+func setup_2d_float_array(width, height):
+	var rows = []
+	for h in range(height):
+		rows.append([])
+		for w in range(width):
+			rows[h].append(0.0)
+	return rows
 
-	func equals(b):
-		return e1.equals(b.e1) and e2.equals(b.e2) and e3.equals(b.e3)
-	
-	static func place_triangle_in_list(list, t):
-		var t_ind = list.bsearch_custom(t, t, "sort")
-		if t_ind >= 0 and t_ind < len(list) and t.equals(list[t_ind]):
-			t = list[t_ind]
-		else:
-			list.insert(t_ind, t)
-		return t
+# Utility function, could maybe be libraried off
+func setup_2d_Vector3_array(width, height):
+	var rows = []
+	for h in range(height):
+		rows.append([])
+		for w in range(width):
+			rows[h].append(Vector3())
+	return rows
 
-func _init(ht, s):
-	vertices  = []
-	edges     = []
-	triangles = []
-	hash_tool = ht
-	scale = s
+func _init(ht, s, world_size):
+	quads         = []
+	hash_tool     = ht
+	scale         = s
+	world_width   = world_size.x
+	world_breadth = world_size.y
+
+	generate_height_values()
 
 func clear():
-	vertices.clear()
-	edges.clear()
-	triangles.clear()
-
-func add_triangle(vec1, vec2, vec3):
-	# Skip any non-triangles:
-	if vec1 == vec2 or vec1 == vec3 or vec2 == vec3:
-		return
-	# Add vertices, or use existing ones
-	var vl = []
-	for v in [Vertex.new(vec1), Vertex.new(vec2), Vertex.new(vec3)]:
-		vl.append(Vertex.place_vertex_in_list(vertices, v))
-	Vertex.make_clockwise(vl)
-
-	# Add edges, or use existing ones
-	var el = []
-	for e in [Edge.new(vl[0], vl[1]), Edge.new(vl[1], vl[2]), Edge.new(vl[0], vl[2])]:
-		el.append(Edge.place_edge_in_list(edges, e))
-	
-	# Add triangle
-	var tri = Triangle.new(el[0], el[1], el[2], vl[0], vl[1], vl[2])
-	Triangle.place_triangle_in_list(triangles, tri)
+	vertex_grid.clear()
+	quads.clear()
 
 func create_base_square_grid(grid_width, grid_breadth, chunk_width, chunk_breadth):
 	var dx = ( chunk_width / grid_width )
 	var dz = ( chunk_breadth / grid_breadth )
+	
+	vertex_grid = setup_2d_Vector3_array(grid_width + 1, grid_breadth + 1)
 
-	for z in grid_breadth:
-		for x in grid_width:
+	for z in range(grid_breadth):
+		for x in range(grid_width):
 			var sx = x * dx
 			var sz = z * dz
 			var ex = (x + 1) * dx
 			var ez = (z + 1) * dz
 
-			#  A +-----+ B
-			#    | \   |
-			#    |   \ |
-			#  C +-----+ D
+			#      sx     ex
+			#       '     '
+			#  sz-  A-----B
+			#       | \   |
+			#       |   \ |
+			#  ez-  C-----D
 
-			var A = Vector3(sx, 0.0, sz)
-			var B = Vector3(ex, 0.0, sz)
-			var C = Vector3(sx, 0.0, ez)
-			var D = Vector3(ex, 0.0, ez)
+			(vertex_grid[z    ][x    ]).x = sx # A.x
+			(vertex_grid[z    ][x + 1]).x = ex # B.x
+			(vertex_grid[z + 1][x    ]).x = sx # C.x
+			(vertex_grid[z + 1][x + 1]).x = ex # D.x
 
-			add_triangle(A, B, D)
-			add_triangle(A, D, C)
-	
-	update_vertex_indices()
+			(vertex_grid[z    ][x    ]).z = sz # A.z
+			(vertex_grid[z    ][x + 1]).z = sz # B.z
+			(vertex_grid[z + 1][x    ]).z = ez # C.z
+			(vertex_grid[z + 1][x + 1]).z = ez # D.z
 
-func set_height_features(x_offset = 0.0, z_offset = 0.0):
-	# This takes an array of hash functions to be accumulated for each vertex
-	# The hash instances in hashes need to implement a getHash(x, y) function
-	# Each getHash will be call for each vertex and the height added by amplitude
-	# Where amplitude is modified for each hashes by the multiplier
+			quads.append(Quad.new(z, x, z + 1, x + 1))
 
-	for v in vertices:
-		var new_height = hash_tool.getHash((v.pos.x + x_offset) * scale, (v.pos.z + z_offset) * scale)
-		v.set_height(new_height)
-		real_min_height = min(real_min_height, new_height)
-		real_max_height = max(real_max_height, new_height)
-	
+func generate_height_values():
+	height_grid = setup_2d_float_array(world_width + 1, world_breadth + 1)
+	water_grid = setup_2d_float_array(world_width + 1, world_breadth + 1)
 
-func update_vertex_indices():
-	# Vertices should already be ordered and unique
-	# Just update the internal indices
-	var ind = 0
-	for vert in vertices:
-		vert.index = ind
-		ind += 1
+	# This sucks a bit as it means calculating all the values at once
+	# But we need the whole world to generate water heights
+	for z in range(len(height_grid)):
+		for x in range(len(height_grid[z])):
+			var new_height = hash_tool.getHash(float((x - (world_width / 2)) * scale), float((z - (world_width / 2)) * scale))
+			height_grid[z][x] = new_height
+			real_min_height = min(real_min_height, new_height)
+			real_max_height = max(real_max_height, new_height)
 
-func generate_mesh(offset):
+func set_height_features(x_offset, z_offset, x_h_grid, z_h_grid):
 
-	set_height_features(offset.x, offset.z)
+	for z in range(len(vertex_grid)):
+		for x in range(len(vertex_grid[z])):
+			var new_height = height_grid[z_h_grid + z][x_h_grid + x]
+			vertex_grid[z][x].y = new_height
+
+func generate_mesh(offset, h_offset):
+
+	set_height_features(offset.x, offset.z, h_offset.x, h_offset.y)
 
 	var mesh = Mesh.new()
 	var surfTool = SurfaceTool.new()
 
 	var color_scale = (2.0 / (max_height - min_height))
-			
+
 	surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for tri in triangles:
-		add_coloured_vertex(surfTool, tri.v1.pos, color_scale)
-		add_coloured_vertex(surfTool, tri.v3.pos, color_scale)
-		add_coloured_vertex(surfTool, tri.v2.pos, color_scale)
 	
+	# A-----B
+	# | \   |
+	# |   \ |
+	# C-----D
+
+	for quad in quads:
+		add_coloured_vertex(surfTool, quad.A(vertex_grid), color_scale)
+		add_coloured_vertex(surfTool, quad.B(vertex_grid), color_scale)
+		add_coloured_vertex(surfTool, quad.D(vertex_grid), color_scale)
+		
+		add_coloured_vertex(surfTool, quad.A(vertex_grid), color_scale)
+		add_coloured_vertex(surfTool, quad.D(vertex_grid), color_scale)
+		add_coloured_vertex(surfTool, quad.C(vertex_grid), color_scale)
+
 	surfTool.generate_normals()
 	surfTool.commit(mesh)
 	return mesh

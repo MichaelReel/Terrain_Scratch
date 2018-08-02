@@ -8,7 +8,6 @@ var dy
 var dz
 
 func _init(zoom, rseed = 0):
-	print ("rseed: " + str(rseed))
 	self.p = []
 	self.min_hash = 0.0
 	self.max_hash = 0.0
@@ -39,7 +38,7 @@ func getPermutation(rseed):
 		222,114, 67, 29, 24, 72,243,141,128,195, 78, 66,215, 61,156,180,
 	]
 	seed(rseed)
-	print ("First rand: " + str(randi()))
+	randi() # Discard first randi, it's usually very low
 	# perm.shuffle(): not implemented quite yet, should replace:
 	var pl = len(perm)
 	var o_ind

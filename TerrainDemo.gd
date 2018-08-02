@@ -9,9 +9,12 @@ var index
 
 export (Vector2) var chunk_resolution = Vector2(32.0, 32.0) # The number of points across the grid
 export (Vector2) var chunks_grid = Vector2(8, 8)            # Size of the grid of chunks
-export (ShaderMaterial) var chunk_material
-export (bool) var force_generation = true
+export (ShaderMaterial) var chunk_material                  # Material put onto the "land" chunks
+export (bool) var force_generation = true                   # Remove generated files and force creation
+export (bool) var create_colliders = false                  # Set to add colliders for each chunk
+
 var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
+var total_grid = Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
 var graph                                                   # Used to generate meshes
 
 
@@ -21,9 +24,11 @@ func _ready():
 	if force_generation:
 		remove_all_files()
 	update_terrain()
-	create_colliders()
-	save_chunks()
-	save_index()
+	if create_colliders:
+		create_colliders()
+	if not force_generation:
+		save_chunks()
+		save_index()
 
 func prepare_storage():
 	var save_dir_path = "user://" + terrain_path + "/"
@@ -44,7 +49,6 @@ func remove_all_files():
 		if index["Chunks"][chunk_name].has("file"):
 			dir.remove(save_dir.get_current_dir() + "/" + index["Chunks"][chunk_name]["file"] )
 			index["Chunks"][chunk_name].erase("file")
-
 
 func load_index():
 	var index_file = save_dir.get_current_dir() + "/index.json"
@@ -71,12 +75,14 @@ func load_index():
 	load_index.close()
 
 	index["Loads"] += 1
-	
+
 func update_terrain():
-	var shelf_limit = 100.0
-	graph = Graph.new(HeightHash.new(shelf_limit, 2), 2 * shelf_limit)
+	var shelf_limit = 11.0
+	graph = Graph.new(HeightHash.new(shelf_limit, 2), 1.0 / shelf_limit, total_grid)
+	index["HeightGrid"] = graph.height_grid
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()
+	var generated = false 
 
 	for z in range(chunks_grid.y):
 		for x in range(chunks_grid.x):
@@ -88,6 +94,8 @@ func update_terrain():
 			else:
 				index["Chunks"][chunk_name] = {}
 				index["Chunks"][chunk_name]["data"] = generate_chunk(x, z)
+				generated = true
+			add_child(index["Chunks"][chunk_name]["data"])
 	
 	# Some debug relating to shader ranges:
 	var cmin = graph.min_height
@@ -98,7 +106,6 @@ func update_terrain():
 		print ("real min height is: " + str(rmin) + ", current: " + str(cmin))
 	if rmax > cmax:
 		print ("real max height is: " + str(rmax) + ", current: " + str(cmax))
-			
 
 func generate_chunk(x, z):
 
@@ -106,13 +113,13 @@ func generate_chunk(x, z):
 	var x_offset = x * chunk_size.x
 	var z_offset = z * chunk_size.z
 	var offset = Vector3(x_offset - 0.5, -0.5, z_offset - 0.5)
+	var grid_offset = Vector2(x * chunk_resolution.x, z * chunk_resolution.y)
 
 	# Create and return the chunk mesh
 	var chunk = MeshInstance.new()
-	chunk.set_mesh(graph.generate_mesh(offset))
+	chunk.set_mesh(graph.generate_mesh(offset, grid_offset))
 	chunk.material_override = chunk_material
 	chunk.translation = offset
-	add_child(chunk)
 	return chunk
 
 func create_colliders():
@@ -120,9 +127,10 @@ func create_colliders():
 	for chunk_name in index["Chunks"].keys():
 		var chunk = index["Chunks"][chunk_name]["data"]
 		# Create collision layer
-		var collsion = chunk.create_trimesh_collision()
-		add_child(collsion)
-
+		# Annoyingly, this causes the mesh_surface_get_index_array error
+		# Clearly, this needs to be created by more "manual" means
+		chunk.create_trimesh_collision()
+		
 func load_chunk(chunk_name, surface_tool):
 	
 	# Prepare mesh
@@ -177,8 +185,6 @@ func load_chunk(chunk_name, surface_tool):
 	chunk.set_mesh(mesh)
 	chunk.material_override = chunk_material
 	chunk.translation = offset
-
-	add_child(chunk)
 
 	return chunk
 

@@ -1,8 +1,9 @@
 [gd_scene load_steps=8 format=2]
 
-[ext_resource path="res://TerrainDemo.gd" type="Script" id=1]
-[ext_resource path="res://Land.material" type="Material" id=2]
-[ext_resource path="res://CameraControl.gd" type="Script" id=3]
+[ext_resource path="res://translucent_blue.shader" type="Shader" id=1]
+[ext_resource path="res://TerrainDemo.gd" type="Script" id=2]
+[ext_resource path="res://Land.material" type="Material" id=3]
+[ext_resource path="res://CameraControl.gd" type="Script" id=4]
 
 [sub_resource type="PlaneMesh" id=1]
 
@@ -12,22 +13,13 @@ subdivide_width = 0
 subdivide_depth = 0
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="Shader" id=5]
-
-code = "shader_type spatial;
-
-void fragment() {
-	ALBEDO = vec3(0.0, 0.0, 0.25);
-	ALPHA = 0.9;
-}"
-
-[sub_resource type="ShaderMaterial" id=3]
+[sub_resource type="ShaderMaterial" id=2]
 
 render_priority = 0
-shader = SubResource( 5 )
+shader = ExtResource( 1 )
 _sections_unfolded = [ "Resource" ]
 
-[sub_resource type="CapsuleShape" id=4]
+[sub_resource type="CapsuleShape" id=3]
 
 radius = 2.0
 height = 2.0
@@ -48,17 +40,18 @@ lod_max_distance = 0.0
 lod_max_hysteresis = 0.0
 mesh = SubResource( 1 )
 skeleton = NodePath("..")
-material/0 = SubResource( 3 )
-script = ExtResource( 1 )
+material/0 = SubResource( 2 )
+script = ExtResource( 2 )
 _sections_unfolded = [ "Transform", "material" ]
 chunk_resolution = Vector2( 32, 32 )
 chunks_grid = Vector2( 8, 8 )
-chunk_material = ExtResource( 2 )
+chunk_material = ExtResource( 3 )
 force_generation = true
+create_colliders = true
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
-transform = Transform( -1, 6.18173e-008, -6.18173e-008, 0, 0.707107, 0.707107, 8.74228e-008, 0.707107, -0.707107, 16, 16, 0 )
+transform = Transform( -1, 6.18173e-008, -6.18173e-008, 0, 0.707107, 0.707107, 8.74228e-008, 0.707107, -0.707107, 0, 0, 0 )
 layers = 1
 light_color = Color( 0.974685, 0.976563, 0.736237, 1 )
 light_energy = 1.0
@@ -98,7 +91,7 @@ axis_lock_angular_x = false
 axis_lock_angular_y = false
 axis_lock_angular_z = false
 collision/safe_margin = 0.001
-script = ExtResource( 3 )
+script = ExtResource( 4 )
 _sections_unfolded = [ "Transform" ]
 
 [node name="CameraMount" type="Spatial" parent="CameraControl" index="0"]
@@ -124,7 +117,7 @@ _sections_unfolded = [ "Transform" ]
 [node name="CollisionShape" type="CollisionShape" parent="CameraControl" index="1"]
 
 transform = Transform( 1, 0, 0, 0, -4.37114e-008, -1, 0, 1, -4.37114e-008, 0, 0, 0 )
-shape = SubResource( 4 )
+shape = SubResource( 3 )
 disabled = false
 _sections_unfolded = [ "Transform" ]
 

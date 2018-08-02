@@ -6,7 +6,8 @@ extends Object
 
 var Perlin = load("res://PerlinRef.gd")
 
-var variation_hash
+var multiplier_hash
+var amp_hash
 var island_limiter
 var hashes
 
@@ -26,12 +27,12 @@ class ContinentalDome:
 		return y / 2.0
 
 func _init(shelf_limit, rseed = 0):
-	print ("Base rseed: " + str(rseed))
 	seed(rseed)
-	print ("First rand: " + str(randi()))
-	var hash_seeds = [randi(), randi(), randi(), randi(), randi()]
+	randi() # Discard first rand as value tends to be low
+	var hash_seeds = [randi(), randi(), randi(), randi(), randi(), randi()]
 	island_limiter = ContinentalDome.new(shelf_limit)
-	variation_hash = Perlin.new(7.0 / shelf_limit, hash_seeds[4])
+	multiplier_hash = Perlin.new(15.0 / shelf_limit, hash_seeds[4])
+	amp_hash = Perlin.new(7.0 / shelf_limit, hash_seeds[5])
 	hashes = [
 		Perlin.new(1.0 / 29.0, hash_seeds[0]),
 		Perlin.new(1.0 / 17.0, hash_seeds[1]),
@@ -40,9 +41,9 @@ func _init(shelf_limit, rseed = 0):
 	]
 
 func getHash(x, y):
-	var amp_multiplier = variation_hash.getHash(x, y)
+	var amp_multiplier = multiplier_hash.getHash(x, y)
 	var new_height = island_limiter.getHash(x, y)
-	var amp = variation_hash.getHash(x, y)
+	var amp = amp_hash.getHash(x, y)
 	for p in hashes:
 		new_height += p.getHash(x, y) * amp
 		amp *= amp_multiplier
