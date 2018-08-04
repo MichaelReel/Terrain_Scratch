@@ -9,7 +9,6 @@ var scale
 var world_width   # The total width of the terrain
 var world_breadth # The total breadth of the terrain
 var height_grid   # The fullset of height values across the grid
-var water_grid    # The fullset of water values across the grid
 
 # Some fields used to track limits
 # Set with some reasonable defaults and update later
@@ -39,33 +38,58 @@ class Quad:
 	# v2_z-  C-----D
 	
 	func A(grid):
-		return grid[v1_z][v1_x]
+		return grid[v1_z][v1_x].pos
 		
 	func B(grid):
-		return grid[v1_z][v2_x]
+		return grid[v1_z][v2_x].pos
 		
 	func C(grid):
-		return grid[v2_z][v1_x]
+		return grid[v2_z][v1_x].pos
 
 	func D(grid):
-		return grid[v2_z][v2_x]
+		return grid[v2_z][v2_x].pos
+
+class Corner:
+	var pos
+
+	func _init():
+		pos = Vector3()
+
+	func set_xz(x, z):
+		pos.x = x
+		pos.z = z
+	
+	func set_y(y):
+		pos.y = y
+
+class Height:
+	var height
+	var grid_x
+	var grid_z
+
+	func _init(x, z):
+		grid_x = x
+		grid_z = z
+
+	func set_height(y):
+		height = y
 
 # Utility function, could maybe be libraried off
-func setup_2d_float_array(width, height):
+func setup_2d_Height_array(width, height):
 	var rows = []
 	for h in range(height):
 		rows.append([])
 		for w in range(width):
-			rows[h].append(0.0)
+			rows[h].append(Height.new(w,h))
 	return rows
 
 # Utility function, could maybe be libraried off
-func setup_2d_Vector3_array(width, height):
+func setup_2d_Corner_array(width, height):
 	var rows = []
 	for h in range(height):
 		rows.append([])
 		for w in range(width):
-			rows[h].append(Vector3())
+			rows[h].append(Corner.new())
 	return rows
 
 func _init(ht, s, world_size):
@@ -85,7 +109,7 @@ func create_base_square_grid(grid_width, grid_breadth, chunk_width, chunk_breadt
 	var dx = ( chunk_width / grid_width )
 	var dz = ( chunk_breadth / grid_breadth )
 	
-	vertex_grid = setup_2d_Vector3_array(grid_width + 1, grid_breadth + 1)
+	vertex_grid = setup_2d_Corner_array(grid_width + 1, grid_breadth + 1)
 
 	for z in range(grid_breadth):
 		for x in range(grid_width):
@@ -101,28 +125,22 @@ func create_base_square_grid(grid_width, grid_breadth, chunk_width, chunk_breadt
 			#       |   \ |
 			#  ez-  C-----D
 
-			(vertex_grid[z    ][x    ]).x = sx # A.x
-			(vertex_grid[z    ][x + 1]).x = ex # B.x
-			(vertex_grid[z + 1][x    ]).x = sx # C.x
-			(vertex_grid[z + 1][x + 1]).x = ex # D.x
-
-			(vertex_grid[z    ][x    ]).z = sz # A.z
-			(vertex_grid[z    ][x + 1]).z = sz # B.z
-			(vertex_grid[z + 1][x    ]).z = ez # C.z
-			(vertex_grid[z + 1][x + 1]).z = ez # D.z
+			vertex_grid[z    ][x    ].set_xz(sx, sz) # A
+			vertex_grid[z    ][x + 1].set_xz(ex, sz) # B
+			vertex_grid[z + 1][x    ].set_xz(sx, ez) # C
+			vertex_grid[z + 1][x + 1].set_xz(ex, ez) # D
 
 			quads.append(Quad.new(z, x, z + 1, x + 1))
 
 func generate_height_values():
-	height_grid = setup_2d_float_array(world_width + 1, world_breadth + 1)
-	water_grid = setup_2d_float_array(world_width + 1, world_breadth + 1)
+	height_grid = setup_2d_Height_array(world_width + 1, world_breadth + 1)
 
 	# This sucks a bit as it means calculating all the values at once
 	# But we need the whole world to generate water heights
 	for z in range(len(height_grid)):
 		for x in range(len(height_grid[z])):
 			var new_height = hash_tool.getHash(float((x - (world_width / 2)) * scale), float((z - (world_width / 2)) * scale))
-			height_grid[z][x] = new_height
+			height_grid[z][x].set_height(new_height)
 			real_min_height = min(real_min_height, new_height)
 			real_max_height = max(real_max_height, new_height)
 
@@ -130,8 +148,8 @@ func set_height_features(x_offset, z_offset, x_h_grid, z_h_grid):
 
 	for z in range(len(vertex_grid)):
 		for x in range(len(vertex_grid[z])):
-			var new_height = height_grid[z_h_grid + z][x_h_grid + x]
-			vertex_grid[z][x].y = new_height
+			var new_height = height_grid[z_h_grid + z][x_h_grid + x].height
+			vertex_grid[z][x].set_y(new_height)
 
 func generate_mesh(offset, h_offset):
 
