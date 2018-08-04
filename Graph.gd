@@ -23,6 +23,8 @@ class Quad:
 	var v1_z
 	var v2_x
 	var v2_z
+	
+	var water_level
 
 	func _init(vert1_x, vert1_z, vert2_x, vert2_z):
 		v1_x = vert1_x
@@ -38,41 +40,73 @@ class Quad:
 	# v2_z-  C-----D
 	
 	func A(grid):
-		return grid[v1_z][v1_x].pos
+		return grid[v1_z][v1_x]
 		
 	func B(grid):
-		return grid[v1_z][v2_x].pos
+		return grid[v1_z][v2_x]
 		
 	func C(grid):
-		return grid[v2_z][v1_x].pos
+		return grid[v2_z][v1_x]
 
 	func D(grid):
-		return grid[v2_z][v2_x].pos
+		return grid[v2_z][v2_x]
+	
+	func set_water_level(height):
+		water_level = height
 
 class Corner:
 	var pos
+	var water_pos
 
 	func _init():
 		pos = Vector3()
+		water_pos = Vector3()
 
 	func set_xz(x, z):
 		pos.x = x
 		pos.z = z
+		water_pos.x = x
+		water_pos.z = z
 	
 	func set_y(y):
 		pos.y = y
+	
+	func set_water_height(height):
+		water_pos.y = height
 
 class Height:
 	var height
 	var grid_x
 	var grid_z
 
+	var water_height
+	var closed
+
 	func _init(x, z):
 		grid_x = x
 		grid_z = z
 
+		closed = false
+
 	func set_height(y):
 		height = y
+		water_height = y
+
+	static func y_sort(a, b):
+		if a.height > b.height:
+			return true
+		elif a.height == b.height:
+			if a.grid_z < b.grid_z:
+				return true
+			elif a.grid_z == b.grid_z:
+				if a.grid_x < b.grid_x:
+					return
+		return false
+
+static func place_height_in_list(list, h):
+	var h_ind = list.bsearch_custom(h, Height, "y_sort")
+	list.insert(h_ind, h)
+	h.closed = true
 
 # Utility function, could maybe be libraried off
 func setup_2d_Height_array(width, height):
@@ -143,13 +177,71 @@ func generate_height_values():
 			height_grid[z][x].set_height(new_height)
 			real_min_height = min(real_min_height, new_height)
 			real_max_height = max(real_max_height, new_height)
+	
+	priority_flood()
 
 func set_height_features(x_offset, z_offset, x_h_grid, z_h_grid):
 
 	for z in range(len(vertex_grid)):
 		for x in range(len(vertex_grid[z])):
-			var new_height = height_grid[z_h_grid + z][x_h_grid + x].height
-			vertex_grid[z][x].set_y(new_height)
+			var corner = height_grid[z_h_grid + z][x_h_grid + x]
+			vertex_grid[z][x].set_y(corner.height)
+			vertex_grid[z][x].set_water_height(corner.water_height)
+
+	# Set grid cell water heights for grids that are water level
+	for quad in quads:
+		quad.water_level = null
+		var is_level = true
+		# water levels must all be equal
+		var water_height = quad.A(vertex_grid).water_pos.y
+		for corner in [quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
+			if water_height != corner.water_pos.y :
+				is_level = false
+		if not is_level:
+			continue
+		var terrain_lower = false
+		# one corner must be lower that the water level
+		for corner in [quad.A(vertex_grid), quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
+			if water_height > corner.pos.y:
+				terrain_lower = true
+		if terrain_lower:
+			quad.water_level = water_height
+
+func priority_flood():
+	var queue = []
+	var surface = []
+	
+	# Add all edge heights to queue
+	for z in range(len(height_grid)):
+		for x in range(len(height_grid[z])):
+			if z <= 0 or x <= 0 or z >= len(height_grid) - 1 or x >= len(height_grid[z]) -1:
+				place_height_in_list(queue, height_grid[z][x])
+	
+	# Take each queued point and process it
+	while not queue.empty():
+		var h = queue.pop_back()
+		# Get the neighbours
+		var neighbours = []
+		if h.grid_x > 0:
+			neighbours.append(height_grid[h.grid_z][h.grid_x - 1])
+		if h.grid_z > 0:
+			neighbours.append(height_grid[h.grid_z - 1][h.grid_x])
+		if h.grid_x < len(height_grid[0]) - 1:
+			neighbours.append(height_grid[h.grid_z][h.grid_x + 1])
+		if h.grid_z < len(height_grid) - 1:
+			neighbours.append(height_grid[h.grid_z + 1][h.grid_x])
+		for n in neighbours:
+			if n.closed: continue
+			n.water_height = max(h.water_height, n.water_height)
+			place_height_in_list(queue, n)
+		# If the current water height is higher than the terrain
+		if h.water_height > h.height:
+			# Add to the surface
+			surface.append(h)
+
+	# TODO: Take each surface point and level out the water around it
+
+
 
 func generate_mesh(offset, h_offset):
 
@@ -157,28 +249,52 @@ func generate_mesh(offset, h_offset):
 
 	var mesh = Mesh.new()
 	var surfTool = SurfaceTool.new()
+	var waterSurface = SurfaceTool.new()
 
 	var color_scale = (2.0 / (max_height - min_height))
 
 	surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	waterSurface.add_color(Color(0.0, 0.0, 1.0, 0.25))
+
+	for quad in quads:
+		draw_terrain_quad(surfTool, quad, color_scale)
+		draw_water_quad(waterSurface, quad)
+
+	surfTool.generate_normals()
+	surfTool.commit(mesh)
+
+	waterSurface.generate_normals()
+	waterSurface.commit(mesh)
+
+	return mesh
+
+func draw_terrain_quad(surfTool, quad, color_scale):
 	
 	# A-----B
 	# | \   |
 	# |   \ |
 	# C-----D
 
-	for quad in quads:
-		add_coloured_vertex(surfTool, quad.A(vertex_grid), color_scale)
-		add_coloured_vertex(surfTool, quad.B(vertex_grid), color_scale)
-		add_coloured_vertex(surfTool, quad.D(vertex_grid), color_scale)
-		
-		add_coloured_vertex(surfTool, quad.A(vertex_grid), color_scale)
-		add_coloured_vertex(surfTool, quad.D(vertex_grid), color_scale)
-		add_coloured_vertex(surfTool, quad.C(vertex_grid), color_scale)
+	add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
+	add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
+	add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
 
-	surfTool.generate_normals()
-	surfTool.commit(mesh)
-	return mesh
+	add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
+	add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
+	add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
+
+func draw_water_quad(surfTool, quad):
+	# If ABCD water levels are over-terrain and the same height:
+	if quad.water_level:
+		
+		surfTool.add_vertex(quad.A(vertex_grid).water_pos)
+		surfTool.add_vertex(quad.B(vertex_grid).water_pos)
+		surfTool.add_vertex(quad.D(vertex_grid).water_pos)
+
+		surfTool.add_vertex(quad.A(vertex_grid).water_pos)
+		surfTool.add_vertex(quad.D(vertex_grid).water_pos)
+		surfTool.add_vertex(quad.C(vertex_grid).water_pos)
 
 func add_coloured_vertex(surfTool, pos, color_scale):
 	var height = pos.y
