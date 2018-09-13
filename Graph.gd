@@ -81,12 +81,14 @@ class Height:
 
 	var water_height
 	var closed
+	var levelled
 
 	func _init(x, z):
 		grid_x = x
 		grid_z = z
 
 		closed = false
+		levelled = false
 
 	func set_height(y):
 		height = y
@@ -207,6 +209,26 @@ func set_height_features(x_offset, z_offset, x_h_grid, z_h_grid):
 		if terrain_lower:
 			quad.water_level = water_height
 
+func get_grid_neighbours(h, diamond = false):
+	var neighbours = []
+	if h.grid_x > 0:
+		neighbours.append(height_grid[h.grid_z][h.grid_x - 1])
+		if not diamond and h.grid_z > 0:
+			neighbours.append(height_grid[h.grid_z - 1][h.grid_x - 1])
+		if not diamond and h.grid_z < len(height_grid) - 1:
+			neighbours.append(height_grid[h.grid_z + 1][h.grid_x - 1])
+	if h.grid_z > 0:
+		neighbours.append(height_grid[h.grid_z - 1][h.grid_x])
+	if h.grid_x < len(height_grid[0]) - 1:
+		neighbours.append(height_grid[h.grid_z][h.grid_x + 1])
+		if h.grid_z > 0:
+			not diamond and neighbours.append(height_grid[h.grid_z - 1][h.grid_x + 1])
+		if h.grid_z < len(height_grid) - 1:
+			not diamond and neighbours.append(height_grid[h.grid_z + 1][h.grid_x + 1])
+	if h.grid_z < len(height_grid) - 1:
+		neighbours.append(height_grid[h.grid_z + 1][h.grid_x])
+	return neighbours
+
 func priority_flood():
 	var queue = []
 	var surface = []
@@ -220,28 +242,27 @@ func priority_flood():
 	# Take each queued point and process it
 	while not queue.empty():
 		var h = queue.pop_back()
-		# Get the neighbours
-		var neighbours = []
-		if h.grid_x > 0:
-			neighbours.append(height_grid[h.grid_z][h.grid_x - 1])
-		if h.grid_z > 0:
-			neighbours.append(height_grid[h.grid_z - 1][h.grid_x])
-		if h.grid_x < len(height_grid[0]) - 1:
-			neighbours.append(height_grid[h.grid_z][h.grid_x + 1])
-		if h.grid_z < len(height_grid) - 1:
-			neighbours.append(height_grid[h.grid_z + 1][h.grid_x])
-		for n in neighbours:
+		# Set up the neighbours for processing
+		for n in get_grid_neighbours(h, true):
 			if n.closed: continue
 			n.water_height = max(h.water_height, n.water_height)
 			place_height_in_list(queue, n)
 		# If the current water height is higher than the terrain
 		if h.water_height > h.height:
 			# Add to the surface
+			h.levelled = true
 			surface.append(h)
 
-	# TODO: Take each surface point and level out the water around it
-
-
+	# Take each surface point and level out the water around it
+	while not surface.empty():
+		var h = surface.pop_back()
+		# Spread the surface to the neighbouring points
+		for n in get_grid_neighbours(h):
+			if n.water_height > h.water_height:
+				n.water_height = h.water_height
+			if not n.levelled and n.water_height > n.height:
+				n.levelled = true
+				surface.push_back(n)
 
 func generate_mesh(offset, h_offset):
 

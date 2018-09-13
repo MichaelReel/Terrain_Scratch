@@ -51,7 +51,7 @@ create_colliders = true
 
 [node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
 
-transform = Transform( -1, 6.18173e-008, -6.18173e-008, 0, 0.707107, 0.707107, 8.74228e-008, 0.707107, -0.707107, 0, 0, 0 )
+transform = Transform( -1, 6.18173e-08, -6.18173e-08, 0, 0.707107, 0.707107, 8.74228e-08, 0.707107, -0.707107, 0, 0, 0 )
 layers = 1
 light_color = Color( 0.974685, 0.976563, 0.736237, 1 )
 light_energy = 1.0
@@ -116,7 +116,7 @@ _sections_unfolded = [ "Transform" ]
 
 [node name="CollisionShape" type="CollisionShape" parent="CameraControl" index="1"]
 
-transform = Transform( 1, 0, 0, 0, -4.37114e-008, -1, 0, 1, -4.37114e-008, 0, 0, 0 )
+transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0 )
 shape = SubResource( 3 )
 disabled = false
 _sections_unfolded = [ "Transform" ]
