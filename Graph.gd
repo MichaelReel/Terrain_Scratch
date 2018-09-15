@@ -292,18 +292,41 @@ func generate_mesh(offset, h_offset):
 
 func draw_terrain_quad(surfTool, quad, color_scale):
 	
-	# A-----B
-	# | \   |
-	# |   \ |
-	# C-----D
+	# Split the quad along the 2 average highest opposite vertices
+	var AD = abs(quad.A(vertex_grid).pos.y - quad.D(vertex_grid).pos.y)
+	var BC = abs(quad.B(vertex_grid).pos.y - quad.C(vertex_grid).pos.y)
 
-	add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
-	add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
-	add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
+	if AD >= BC:
 
-	add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
-	add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
-	add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
+		# A-----B
+		# | \   |
+		# |   \ |
+		# C-----D
+
+		add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
+
+		add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
+	
+	else:
+
+		# A-----B
+		# |   / |
+		# | /   |
+		# C-----D
+
+		add_coloured_vertex(surfTool, quad.A(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
+
+		add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
+		add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
+
+
 
 func draw_water_quad(surfTool, quad):
 	# If ABCD water levels are over-terrain and the same height:
