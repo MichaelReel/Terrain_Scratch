@@ -18,6 +18,7 @@ var max_height = 1.6
 var real_min_height = min_height
 var real_max_height = max_height
 
+
 class Quad:
 	var v1_x
 	var v1_z
@@ -78,6 +79,9 @@ class Height:
 	var height
 	var grid_x
 	var grid_z
+	
+	var sea_level = 0.25        # Magic number
+	var bed_rock_precision = 32 # Magic number
 
 	var water_height
 	var closed
@@ -92,7 +96,8 @@ class Height:
 
 	func set_height(y):
 		height = y
-		water_height = y
+		# Water should be the min water height higher
+		water_height = floor(max(sea_level, y) * bed_rock_precision) / bed_rock_precision
 
 	static func y_sort(a, b):
 		if a.height > b.height:
@@ -232,7 +237,7 @@ func get_grid_neighbours(h, diamond = false):
 func priority_flood():
 	var queue = []
 	var surface = []
-	
+
 	# Add all edge heights to queue
 	for z in range(len(height_grid)):
 		for x in range(len(height_grid[z])):
@@ -296,7 +301,7 @@ func draw_terrain_quad(surfTool, quad, color_scale):
 	var AD = abs(quad.A(vertex_grid).pos.y - quad.D(vertex_grid).pos.y)
 	var BC = abs(quad.B(vertex_grid).pos.y - quad.C(vertex_grid).pos.y)
 
-	if AD >= BC:
+	if AD > BC:
 
 		# A-----B
 		# | \   |
