@@ -187,7 +187,7 @@ func generate_height_values():
 	
 	priority_flood()
 
-func set_height_features(x_offset, z_offset, x_h_grid, z_h_grid):
+func set_height_features(x_h_grid, z_h_grid):
 
 	for z in range(len(vertex_grid)):
 		for x in range(len(vertex_grid[z])):
@@ -226,10 +226,10 @@ func get_grid_neighbours(h, diamond = false):
 		neighbours.append(height_grid[h.grid_z - 1][h.grid_x])
 	if h.grid_x < len(height_grid[0]) - 1:
 		neighbours.append(height_grid[h.grid_z][h.grid_x + 1])
-		if h.grid_z > 0:
-			not diamond and neighbours.append(height_grid[h.grid_z - 1][h.grid_x + 1])
-		if h.grid_z < len(height_grid) - 1:
-			not diamond and neighbours.append(height_grid[h.grid_z + 1][h.grid_x + 1])
+		if not diamond and h.grid_z > 0:
+			neighbours.append(height_grid[h.grid_z - 1][h.grid_x + 1])
+		if not diamond and h.grid_z < len(height_grid) - 1:
+			neighbours.append(height_grid[h.grid_z + 1][h.grid_x + 1])
 	if h.grid_z < len(height_grid) - 1:
 		neighbours.append(height_grid[h.grid_z + 1][h.grid_x])
 	return neighbours
@@ -269,9 +269,9 @@ func priority_flood():
 				n.levelled = true
 				surface.push_back(n)
 
-func generate_mesh(offset, h_offset):
+func generate_mesh(h_offset):
 
-	set_height_features(offset.x, offset.z, h_offset.x, h_offset.y)
+	set_height_features(h_offset.x, h_offset.y)
 
 	var mesh = Mesh.new()
 	var surfTool = SurfaceTool.new()

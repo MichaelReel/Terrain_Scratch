@@ -27,9 +27,6 @@ func _ready():
 	set_process_input(true)
 
 func _physics_process(delta):
-
-	var status = "vel      : " + str(vel) + "\n"
-
 	# Intended direction of movement
 	var dir = Vector3()
 

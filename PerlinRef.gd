@@ -85,7 +85,7 @@ func getOctaveHash(x, y, z = 0, n = 1):
 	var scale = 1
 	for i in range(n):
 		total += getHash(x * scale, y * scale, z * scale) * (1.0 / float(scale))
-		scale << 1
+		scale = scale << 1
 	
 	return total
 

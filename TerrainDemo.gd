@@ -11,7 +11,7 @@ export (Vector2) var chunk_resolution = Vector2(32.0, 32.0) # The number of poin
 export (Vector2) var chunks_grid = Vector2(8, 8)            # Size of the grid of chunks
 export (ShaderMaterial) var chunk_material                  # Material put onto the "land" chunks
 export (bool) var force_generation = true                   # Remove generated files and force creation
-export (bool) var create_colliders = false                  # Set to add colliders for each chunk
+export (bool) var generate_colliders = false                # Set to add colliders for each chunk
 
 var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var total_grid = Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
@@ -24,7 +24,7 @@ func _ready():
 	if force_generation:
 		remove_all_files()
 	update_terrain()
-	if create_colliders:
+	if generate_colliders:
 		create_colliders()
 	if not force_generation:
 		save_chunks()
@@ -82,11 +82,9 @@ func update_terrain():
 	index["HeightGrid"] = graph.height_grid
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()
-	var generated = false 
 
 	for z in range(chunks_grid.y):
 		for x in range(chunks_grid.x):
-			var chunk
 			var chunk_name = str(x) + "_" + str(z)
 			if index["Chunks"].has(chunk_name) and index["Chunks"][chunk_name].has("file"):
 				surface_tool.clear()
@@ -94,7 +92,6 @@ func update_terrain():
 			else:
 				index["Chunks"][chunk_name] = {}
 				index["Chunks"][chunk_name]["data"] = generate_chunk(x, z)
-				generated = true
 			add_child(index["Chunks"][chunk_name]["data"])
 	
 	# Some debug relating to shader ranges:
@@ -117,7 +114,7 @@ func generate_chunk(x, z):
 
 	# Create and return the chunk mesh
 	var chunk = MeshInstance.new()
-	chunk.set_mesh(graph.generate_mesh(offset, grid_offset))
+	chunk.set_mesh(graph.generate_mesh(grid_offset))
 	chunk.material_override = chunk_material
 	chunk.translation = offset
 	return chunk
@@ -150,7 +147,6 @@ func load_chunk(chunk_name, surface_tool):
 
 	# Load vertices
 	var vertices = []
-	var edges = []
 	var colors = []
 	var vertex_count = chunk_file.get_32()
 	for vertex_ind in range(vertex_count):
