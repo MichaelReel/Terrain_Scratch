@@ -4,12 +4,8 @@ extends Object
 # Internally it can use many techniques, but ultimately 
 # should return a simple height per coordinate call
 
-var Perlin = load("res://PerlinRef.gd")
-
-var multiplier_hash
 var amp_hash
 var island_limiter
-var hashes
 
 class ContinentalDome:
 	var r
@@ -29,22 +25,15 @@ class ContinentalDome:
 func _init(shelf_limit, rseed = 0):
 	seed(rseed)
 	randi() # Discard first rand as value tends to be low
-	var hash_seeds = [randi(), randi(), randi(), randi(), randi(), randi()]
 	island_limiter = ContinentalDome.new(shelf_limit)
-	multiplier_hash = Perlin.new(15.0 / shelf_limit, hash_seeds[4])
-	amp_hash = Perlin.new(7.0 / shelf_limit, hash_seeds[5])
-	hashes = [
-		Perlin.new(1.0 / 29.0, hash_seeds[0]),
-		Perlin.new(1.0 / 17.0, hash_seeds[1]),
-		Perlin.new(1.0 / 7.0, hash_seeds[2]),
-		Perlin.new(1.0 / 3.0, hash_seeds[3]),
-	]
+	amp_hash = OpenSimplexNoise.new()
+	amp_hash.seed = randi()
+	amp_hash.octaves = 4
+	amp_hash.period = 7.0
+	amp_hash.persistence = 0.8
 
 func getHash(x, y):
-	var amp_multiplier = multiplier_hash.getHash(x, y)
 	var new_height = island_limiter.getHash(x, y)
-	var amp = amp_hash.getHash(x, y)
-	for p in hashes:
-		new_height += p.getHash(x, y) * amp
-		amp *= amp_multiplier
+	var amp = amp_hash.get_noise_2d(x, y)
+	new_height = new_height + amp
 	return new_height
