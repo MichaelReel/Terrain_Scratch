@@ -18,6 +18,7 @@ var max_height = 1.6
 var real_min_height = min_height
 var real_max_height = max_height
 
+var sea_level = 0.0        # Magic number
 
 class Quad:
 	var v1_x
@@ -75,29 +76,33 @@ class Corner:
 	func set_water_height(height):
 		water_pos.y = height
 
+
 class Height:
 	var height
 	var grid_x
 	var grid_z
+	var parent
 	
-	var sea_level = 0.25        # Magic number
 	var bed_rock_precision = 32 # Magic number
 
 	var water_height
 	var closed
 	var levelled
 
-	func _init(x, z):
+	func _init(x, z, p):
 		grid_x = x
 		grid_z = z
+		parent = p
 
 		closed = false
 		levelled = false
 
 	func set_height(y):
 		height = y
+	
+	func calc_start_water_height():
 		# Water should be the min water height higher
-		water_height = floor(max(sea_level, y) * bed_rock_precision) / bed_rock_precision
+		water_height = floor(max(parent.sea_level, self.height) * bed_rock_precision) / bed_rock_precision
 
 	static func y_sort(a, b):
 		if a.height > b.height:
@@ -121,7 +126,7 @@ func setup_2d_Height_array(width, height):
 	for h in range(height):
 		rows.append([])
 		for w in range(width):
-			rows[h].append(Height.new(w,h))
+			rows[h].append(Height.new(w, h, self))
 	return rows
 
 # Utility function, could maybe be libraried off
@@ -129,6 +134,7 @@ func setup_2d_Corner_array(width, height):
 	var rows = []
 	for h in range(height):
 		rows.append([])
+		#warning-ignore:unused_variable
 		for w in range(width):
 			rows[h].append(Corner.new())
 	return rows
@@ -175,6 +181,7 @@ func create_base_square_grid(grid_width, grid_breadth, chunk_width, chunk_breadt
 
 func generate_height_values():
 	height_grid = setup_2d_Height_array(world_width + 1, world_breadth + 1)
+	var highest_edge = 0
 
 	# This sucks a bit as it means calculating all the values at once
 	# But we need the whole world to generate water heights
@@ -184,6 +191,12 @@ func generate_height_values():
 			height_grid[z][x].set_height(new_height)
 			real_min_height = min(real_min_height, new_height)
 			real_max_height = max(real_max_height, new_height)
+			if z <= 0 or x <= 0 or z >= len(height_grid) - 1 or x >= len(height_grid[z]) -1:
+				highest_edge = max(highest_edge, new_height)
+			
+	# Use the highest edge tile as the min water level
+	sea_level = highest_edge
+	print ("sea_level: " + str(sea_level))
 	
 	priority_flood()
 
@@ -242,6 +255,7 @@ func priority_flood():
 	for z in range(len(height_grid)):
 		for x in range(len(height_grid[z])):
 			if z <= 0 or x <= 0 or z >= len(height_grid) - 1 or x >= len(height_grid[z]) -1:
+				height_grid[z][x].calc_start_water_height()
 				place_height_in_list(queue, height_grid[z][x])
 	
 	# Take each queued point and process it
@@ -250,6 +264,7 @@ func priority_flood():
 		# Set up the neighbours for processing
 		for n in get_grid_neighbours(h, true):
 			if n.closed: continue
+			n.calc_start_water_height()
 			n.water_height = max(h.water_height, n.water_height)
 			place_height_in_list(queue, n)
 		# If the current water height is higher than the terrain
@@ -330,8 +345,6 @@ func draw_terrain_quad(surfTool, quad, color_scale):
 		add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
 		add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
 		add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
-
-
 
 func draw_water_quad(surfTool, quad):
 	# If ABCD water levels are over-terrain and the same height:
