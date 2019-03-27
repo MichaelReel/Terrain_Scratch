@@ -149,6 +149,7 @@ func load_chunk(chunk_name, surface_tool):
 	var vertices = []
 	var colors = []
 	var vertex_count = chunk_file.get_32()
+	#warning-ignore:unused_variable
 	for vertex_ind in range(vertex_count):
 		# Load vertex position
 		var vertex = Vector3()
@@ -169,7 +170,9 @@ func load_chunk(chunk_name, surface_tool):
 	var face_count = chunk_file.get_32()
 
 	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	#warning-ignore:unused_variable
 	for face_ind in range(face_count):
+		#warning-ignore:unused_variable
 		for fv_ind in range(3):
 			var vertex_ind = chunk_file.get_32()
 			surface_tool.add_color(colors[vertex_ind])

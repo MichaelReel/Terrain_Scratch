@@ -19,6 +19,7 @@ var real_min_height = min_height
 var real_max_height = max_height
 
 var sea_level = 0.0        # Magic number
+var water_surfaces = []
 
 class Quad:
 	var v1_x
@@ -52,9 +53,6 @@ class Quad:
 
 	func D(grid):
 		return grid[v2_z][v2_x]
-	
-	func set_water_level(height):
-		water_level = height
 
 class Corner:
 	var pos
@@ -83,9 +81,10 @@ class Height:
 	var grid_z
 	var parent
 	
-	var bed_rock_precision = 32 # Magic number
+	var bed_rock_precision = 64 # Magic number
 
 	var water_height
+	var water_body_ind
 	var closed
 	var levelled
 
@@ -274,15 +273,72 @@ func priority_flood():
 			surface.append(h)
 
 	# Take each surface point and level out the water around it
-	while not surface.empty():
-		var h = surface.pop_back()
-		# Spread the surface to the neighbouring points
-		for n in get_grid_neighbours(h):
-			if n.water_height > h.water_height:
-				n.water_height = h.water_height
-			if not n.levelled and n.water_height > n.height:
-				n.levelled = true
-				surface.push_back(n)
+	var h = surface.pop_back()
+	var next_ind = 0
+	while h:
+		if not h.water_body_ind:
+			# If an adjoining point has an index, use that
+			var adj_ind = get_any_adjoining_index(h)
+			if adj_ind:
+				# Use existing index
+				h.water_body_ind = adj_ind
+				water_surfaces[adj_ind].append(h)
+			else:
+				# Create new index
+				h.water_body_ind = next_ind
+				water_surfaces.append([h])
+				next_ind += 1
+				
+		
+		spread_surface_edges_into_terrain(surface, h)
+		h = surface.pop_back()
+
+	print("next_ind: " + str(next_ind))
+	tidy_empty_water_surfaces()
+	
+	print("surfaces merged: " + str(len(water_surfaces)))
+
+func tidy_empty_water_surfaces():
+	var new_water_surfaces = []
+	var new_ind = 0
+	# remove empty rows and re-align indices
+	while not water_surfaces.empty():
+		var surface = water_surfaces.pop_front()
+		if not surface.empty():
+			for h in surface:
+				h.water_body_ind = new_ind
+			new_water_surfaces.append(surface)
+			new_ind += 1
+	water_surfaces = new_water_surfaces
+
+func get_any_adjoining_index(h):
+	var ind = null
+	for n in get_grid_neighbours(h):
+		if n.water_body_ind:
+			if ind and n.water_body_ind != ind:
+				# 2 body indexes have met, need to merge
+				var moving_ind = n.water_body_ind
+				# print ("merging: " + str(ind) + ", " + str(moving_ind))
+				for mover in water_surfaces[moving_ind]:
+					mover.water_body_ind = ind
+				water_surfaces[ind] += water_surfaces[moving_ind]
+				water_surfaces[moving_ind] = []
+			else:
+				# We found an index (or the same index)
+				ind = n.water_body_ind
+	return ind
+
+func spread_surface_edges_into_terrain(surface, h):
+	# Spread the surface to the neighbouring points
+	for n in get_grid_neighbours(h):
+		if n.water_height > h.water_height:
+			n.water_height = h.water_height
+			# TODO: setting the index should maybe be internal to the height class
+			n.water_body_ind = h.water_body_ind
+			water_surfaces[h.water_body_ind].append(n)
+		if not n.levelled and n.water_height > n.height:
+			n.levelled = true
+			surface.push_back(n)
 
 func generate_mesh(h_offset):
 
