@@ -207,24 +207,57 @@ func set_height_features(x_h_grid, z_h_grid):
 			vertex_grid[z][x].set_y(corner.height)
 			vertex_grid[z][x].set_water_height(corner.water_height)
 
-	# Set grid cell water heights for grids that are water level
-	for quad in quads:
-		quad.water_level = null
-		var is_level = true
-		# water levels must all be equal
-		var water_height = quad.A(vertex_grid).water_pos.y
-		for corner in [quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
-			if water_height != corner.water_pos.y :
-				is_level = false
-		if not is_level:
-			continue
-		var terrain_lower = false
-		# one corner must be lower that the water level
-		for corner in [quad.A(vertex_grid), quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
-			if water_height > corner.pos.y:
-				terrain_lower = true
-		if terrain_lower:
-			quad.water_level = water_height
+#	# Set grid cell water heights for grids that are water level
+#	for quad in quads:
+#		quad.water_level = null
+#		var is_level = true
+#		# water levels must all be equal
+#		var water_height = quad.A(vertex_grid).water_pos.y
+#		for corner in [quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
+#			if water_height != corner.water_pos.y :
+#				is_level = false
+#		if not is_level:
+#			continue
+#		var terrain_lower = false
+#		# one corner must be lower that the water level
+#		for corner in [quad.A(vertex_grid), quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
+#			if water_height > corner.pos.y:
+#				terrain_lower = true
+#		if terrain_lower:
+#			quad.water_level = water_height
+
+func create_water_display_features(surface, surfTool):
+	# Find a rectangle that contains all the points in the surface
+	var bounds = Rect2(surface.front().grid_x, surface.front().grid_z, 0, 0)
+	for h in surface:
+		if h.grid_x < bounds.position.x:
+			bounds.position.x = h.grid_x
+		elif h.grid_x > bounds.end.x:
+			bounds.end.x = h.grid_x
+		if h.grid_z < bounds.position.y:
+			bounds.position.y = h.grid_z
+		elif h.grid_z > bounds.end.y:
+			bounds.end.y = h.grid_z
+			
+	# TEMP DEBUG: draw the dirty big rectangle
+	var quad = Quad.new(bounds.position.x, bounds.position.y, bounds.end.x, bounds.end.y)
+	var water_level = surface.front().water_height
+
+	# TODO: The magic numbers here are due to ignoring the chunking in TerrainDemo.gd
+	#       This is also what's causing the duplicate water surfaces
+
+	var a = Vector3(bounds.position.x / 256.0, water_level, bounds.position.y / 256.0)
+	var b = Vector3(bounds.end.x / 256.0, water_level, bounds.position.y / 256.0)
+	var c = Vector3(bounds.position.x / 256.0, water_level, bounds.end.y / 256.0)
+	var d = Vector3(bounds.end.x / 256.0, water_level, bounds.end.y / 256.0)
+
+	surfTool.add_vertex(a)
+	surfTool.add_vertex(b)
+	surfTool.add_vertex(d)
+
+	surfTool.add_vertex(a)
+	surfTool.add_vertex(d)
+	surfTool.add_vertex(c)
 
 func get_grid_neighbours(h, diamond = false):
 	var neighbours = []
@@ -318,7 +351,6 @@ func get_any_adjoining_index(h):
 			if ind and n.water_body_ind != ind:
 				# 2 body indexes have met, need to merge
 				var moving_ind = n.water_body_ind
-				# print ("merging: " + str(ind) + ", " + str(moving_ind))
 				for mover in water_surfaces[moving_ind]:
 					mover.water_body_ind = ind
 				water_surfaces[ind] += water_surfaces[moving_ind]
@@ -343,26 +375,36 @@ func spread_surface_edges_into_terrain(surface, h):
 func generate_mesh(h_offset):
 
 	set_height_features(h_offset.x, h_offset.y)
-
+	
 	var mesh = Mesh.new()
+	
+	# Draw the terrain base height map
 	var surfTool = SurfaceTool.new()
-	var waterSurface = SurfaceTool.new()
-
 	var color_scale = (2.0 / (max_height - min_height))
-
 	surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	waterSurface.add_color(Color(0.0, 0.0, 1.0, 0.25))
-
 	for quad in quads:
 		draw_terrain_quad(surfTool, quad, color_scale)
-		draw_water_quad(waterSurface, quad)
-
+	
 	surfTool.generate_normals()
 	surfTool.commit(mesh)
+	
+	# Create and draw the water surfaces
+	
+	# TODO: Need to determine which water surfaces are relevant and crop accordingly
+	#       Alternatively, drop the whole chunking thing and just generate everything in one big lump, at least at this level
+	
+	var surf_ind = 0
+	var surf_step = 1.0 / len(water_surfaces)
+	for surface in water_surfaces:
+		var waterSurface = SurfaceTool.new()
+		waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		waterSurface.add_color(Color(0.0, surf_step * surf_ind, 1.0, 0.25))
+		
+		create_water_display_features(surface, waterSurface)
 
-	waterSurface.generate_normals()
-	waterSurface.commit(mesh)
+		waterSurface.generate_normals()
+		waterSurface.commit(mesh)
+		surf_ind += 1
 
 	return mesh
 
@@ -401,18 +443,6 @@ func draw_terrain_quad(surfTool, quad, color_scale):
 		add_coloured_vertex(surfTool, quad.B(vertex_grid).pos, color_scale)
 		add_coloured_vertex(surfTool, quad.D(vertex_grid).pos, color_scale)
 		add_coloured_vertex(surfTool, quad.C(vertex_grid).pos, color_scale)
-
-func draw_water_quad(surfTool, quad):
-	# If ABCD water levels are over-terrain and the same height:
-	if quad.water_level:
-		
-		surfTool.add_vertex(quad.A(vertex_grid).water_pos)
-		surfTool.add_vertex(quad.B(vertex_grid).water_pos)
-		surfTool.add_vertex(quad.D(vertex_grid).water_pos)
-
-		surfTool.add_vertex(quad.A(vertex_grid).water_pos)
-		surfTool.add_vertex(quad.D(vertex_grid).water_pos)
-		surfTool.add_vertex(quad.C(vertex_grid).water_pos)
 
 func add_coloured_vertex(surfTool, pos, color_scale):
 	var height = pos.y
