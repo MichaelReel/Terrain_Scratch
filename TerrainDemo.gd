@@ -56,6 +56,7 @@ func load_index():
 	index = {
 		"Chunks": {},
 		"Loads": 0,
+		"Water": [],
 	}
 
 	# If file isn't there - no bother
@@ -93,6 +94,14 @@ func update_terrain():
 				index["Chunks"][chunk_name] = {}
 				index["Chunks"][chunk_name]["data"] = generate_chunk(x, z)
 			add_child(index["Chunks"][chunk_name]["data"])
+	
+	# TODO: need to selectively load water meshes, assuming intention to keep chunking
+	for surface in graph.generate_water_meshes():
+		var pool = MeshInstance.new()
+		pool.set_mesh(surface)
+		pool.material_override = chunk_material
+		index["Water"].append(pool)
+		add_child(pool)
 	
 	# Some debug relating to shader ranges:
 	var cmin = graph.min_height

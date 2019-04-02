@@ -246,10 +246,10 @@ func create_water_display_features(surface, surfTool):
 	# TODO: The magic numbers here are due to ignoring the chunking in TerrainDemo.gd
 	#       This is also what's causing the duplicate water surfaces
 
-	var a = Vector3(bounds.position.x / 256.0, water_level, bounds.position.y / 256.0)
-	var b = Vector3(bounds.end.x / 256.0, water_level, bounds.position.y / 256.0)
-	var c = Vector3(bounds.position.x / 256.0, water_level, bounds.end.y / 256.0)
-	var d = Vector3(bounds.end.x / 256.0, water_level, bounds.end.y / 256.0)
+	var a = Vector3((bounds.position.x - 128.0) / 256.0, water_level - 0.5, (bounds.position.y - 128.0) / 256.0)
+	var b = Vector3((bounds.end.x - 128.0) / 256.0,      water_level - 0.5, (bounds.position.y - 128.0) / 256.0)
+	var c = Vector3((bounds.position.x - 128.0) / 256.0, water_level - 0.5, (bounds.end.y - 128.0) / 256.0)
+	var d = Vector3((bounds.end.x - 128.0) / 256.0,      water_level - 0.5, (bounds.end.y - 128.0) / 256.0)
 
 	surfTool.add_vertex(a)
 	surfTool.add_vertex(b)
@@ -388,7 +388,11 @@ func generate_mesh(h_offset):
 	surfTool.generate_normals()
 	surfTool.commit(mesh)
 	
+	return mesh
+
+func generate_water_meshes():
 	# Create and draw the water surfaces
+	var water_meshes = []
 	
 	# TODO: Need to determine which water surfaces are relevant and crop accordingly
 	#       Alternatively, drop the whole chunking thing and just generate everything in one big lump, at least at this level
@@ -396,7 +400,9 @@ func generate_mesh(h_offset):
 	var surf_ind = 0
 	var surf_step = 1.0 / len(water_surfaces)
 	for surface in water_surfaces:
+		var mesh = Mesh.new()
 		var waterSurface = SurfaceTool.new()
+		
 		waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
 		waterSurface.add_color(Color(0.0, surf_step * surf_ind, 1.0, 0.25))
 		
@@ -405,8 +411,9 @@ func generate_mesh(h_offset):
 		waterSurface.generate_normals()
 		waterSurface.commit(mesh)
 		surf_ind += 1
-
-	return mesh
+		water_meshes.append(mesh)
+	
+	return water_meshes
 
 func draw_terrain_quad(surfTool, quad, color_scale):
 	
