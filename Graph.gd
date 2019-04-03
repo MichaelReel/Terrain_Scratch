@@ -207,49 +207,32 @@ func set_height_features(x_h_grid, z_h_grid):
 			vertex_grid[z][x].set_y(corner.height)
 			vertex_grid[z][x].set_water_height(corner.water_height)
 
-#	# Set grid cell water heights for grids that are water level
-#	for quad in quads:
-#		quad.water_level = null
-#		var is_level = true
-#		# water levels must all be equal
-#		var water_height = quad.A(vertex_grid).water_pos.y
-#		for corner in [quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
-#			if water_height != corner.water_pos.y :
-#				is_level = false
-#		if not is_level:
-#			continue
-#		var terrain_lower = false
-#		# one corner must be lower that the water level
-#		for corner in [quad.A(vertex_grid), quad.B(vertex_grid), quad.C(vertex_grid), quad.D(vertex_grid)]:
-#			if water_height > corner.pos.y:
-#				terrain_lower = true
-#		if terrain_lower:
-#			quad.water_level = water_height
-
 func create_water_display_features(surface, surfTool):
 	# Find a rectangle that contains all the points in the surface
-	var bounds = Rect2(surface.front().grid_x, surface.front().grid_z, 0, 0)
+	var grid_bounds = Rect2(surface.front().grid_x, surface.front().grid_z, 0, 0)
 	for h in surface:
-		if h.grid_x < bounds.position.x:
-			bounds.position.x = h.grid_x
-		elif h.grid_x > bounds.end.x:
-			bounds.end.x = h.grid_x
-		if h.grid_z < bounds.position.y:
-			bounds.position.y = h.grid_z
-		elif h.grid_z > bounds.end.y:
-			bounds.end.y = h.grid_z
+		if h.grid_x < grid_bounds.position.x:
+			grid_bounds.position.x = h.grid_x
+		elif h.grid_x > grid_bounds.end.x:
+			grid_bounds.end.x = h.grid_x
+		if h.grid_z < grid_bounds.position.y:
+			grid_bounds.position.y = h.grid_z
+		elif h.grid_z > grid_bounds.end.y:
+			grid_bounds.end.y = h.grid_z
 			
 	# TEMP DEBUG: draw the dirty big rectangle
-	var quad = Quad.new(bounds.position.x, bounds.position.y, bounds.end.x, bounds.end.y)
-	var water_level = surface.front().water_height
+	var water_level = surface.front().water_height - 0.5
+	var bounds = Rect2(
+		(grid_bounds.position.x - (world_width / 2)) / world_width, 
+		(grid_bounds.position.y - (world_width / 2)) / world_width, 
+		grid_bounds.size.x / world_width,
+		grid_bounds.size.y / world_width
+	)
 
-	# TODO: The magic numbers here are due to ignoring the chunking in TerrainDemo.gd
-	#       This is also what's causing the duplicate water surfaces
-
-	var a = Vector3((bounds.position.x - 128.0) / 256.0, water_level - 0.5, (bounds.position.y - 128.0) / 256.0)
-	var b = Vector3((bounds.end.x - 128.0) / 256.0,      water_level - 0.5, (bounds.position.y - 128.0) / 256.0)
-	var c = Vector3((bounds.position.x - 128.0) / 256.0, water_level - 0.5, (bounds.end.y - 128.0) / 256.0)
-	var d = Vector3((bounds.end.x - 128.0) / 256.0,      water_level - 0.5, (bounds.end.y - 128.0) / 256.0)
+	var a = Vector3(bounds.position.x, water_level, bounds.position.y)
+	var b = Vector3(bounds.end.x,      water_level, bounds.position.y)
+	var c = Vector3(bounds.position.x, water_level, bounds.end.y)
+	var d = Vector3(bounds.end.x,      water_level, bounds.end.y)
 
 	surfTool.add_vertex(a)
 	surfTool.add_vertex(b)
