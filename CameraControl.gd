@@ -10,7 +10,7 @@ const MOUSE_SENSITIVITY = 0.10
 
 var vel = Vector3()
 
-const MAX_SPEED = 20            # Fastest camera can reach
+const MAX_SPEED = 100           # Fastest camera can reach
 const ACCEL = 3.5               # How fast we get to top speed
 const DEACCEL = 16              # How fast we come to a complete stop
 const MAX_SLOPE_ANGLE = 89      # Steepest angle we can slide up

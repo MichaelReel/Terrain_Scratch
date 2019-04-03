@@ -219,28 +219,88 @@ func create_water_display_features(surface, surfTool):
 			grid_bounds.position.y = h.grid_z
 		elif h.grid_z > grid_bounds.end.y:
 			grid_bounds.end.y = h.grid_z
-			
-	# TEMP DEBUG: draw the dirty big rectangle
+	
 	var water_level = surface.front().water_height - 0.5
-	var bounds = Rect2(
+	
+#	# TEMP DEBUG: draw the dirty big rectangle
+#	var bounds = get_world_bounds_from_grid_bounds(grid_bounds)
+#	draw_level_quad(surfTool, bounds, water_level)
+
+	# Go through each possible quad within the surface bounds and draw all complete quads and partial tris
+	for z in range(grid_bounds.position.y, grid_bounds.end.y):
+		for x in range(grid_bounds.position.x, grid_bounds.end.x):
+			var score = get_surface_occupancy_score(surface, z, x, surface.front().water_body_ind)
+			# We only care about drawing 5 posible scores
+			# TODO: Also want to make a list of edge vertices
+			match score:
+				15: # Full quad
+					draw_level_quad(surfTool, get_world_bounds_from_grid_bounds(Rect2(x, z, 1, 1)), water_level)
+				14: # B - D - C
+					draw_tri(
+						surfTool,
+						get_level_vert(Vector2(x + 1, z), water_level),
+						get_level_vert(Vector2(x + 1, z + 1), water_level),
+						get_level_vert(Vector2(x, z + 1), water_level)
+					)
+				13: # A - D - C
+					draw_tri(
+						surfTool,
+						get_level_vert(Vector2(x, z), water_level),
+						get_level_vert(Vector2(x + 1, z + 1), water_level),
+						get_level_vert(Vector2(x, z + 1), water_level)
+					)
+				11: # A - B - D
+					draw_tri(
+						surfTool,
+						get_level_vert(Vector2(x, z), water_level),
+						get_level_vert(Vector2(x + 1, z), water_level),
+						get_level_vert(Vector2(x + 1, z + 1), water_level)
+					)
+				7: # A - B - C
+					draw_tri(
+						surfTool,
+						get_level_vert(Vector2(x, z), water_level),
+						get_level_vert(Vector2(x + 1, z), water_level),
+						get_level_vert(Vector2(x, z + 1), water_level)
+					)
+			
+func get_surface_occupancy_score(surface, z, x, water_body_ind):
+	var score = 0
+	# Assuming all surface features will have the same water height
+	score += 1 if height_grid[z][x].water_body_ind == water_body_ind else 0
+	score += 2 if height_grid[z][x + 1].water_body_ind == water_body_ind else 0
+	score += 4 if height_grid[z + 1][x].water_body_ind == water_body_ind else 0
+	score += 8 if height_grid[z + 1][x + 1].water_body_ind == water_body_ind else 0
+	return score
+
+func get_world_bounds_from_grid_bounds(grid_bounds):
+	return Rect2(
 		(grid_bounds.position.x - (world_width / 2)) / world_width, 
 		(grid_bounds.position.y - (world_width / 2)) / world_width, 
 		grid_bounds.size.x / world_width,
 		grid_bounds.size.y / world_width
 	)
 
-	var a = Vector3(bounds.position.x, water_level, bounds.position.y)
-	var b = Vector3(bounds.end.x,      water_level, bounds.position.y)
-	var c = Vector3(bounds.position.x, water_level, bounds.end.y)
-	var d = Vector3(bounds.end.x,      water_level, bounds.end.y)
+func get_level_vert(grid_position, water_level):
+	return Vector3(
+		(grid_position.x - (world_width / 2)) / world_width,
+		water_level,
+		(grid_position.y - (world_width / 2)) / world_width
+	)
 
-	surfTool.add_vertex(a)
-	surfTool.add_vertex(b)
-	surfTool.add_vertex(d)
+func draw_level_quad(surfTool, quad, water_level):
+	var a = Vector3(quad.position.x, water_level, quad.position.y)
+	var b = Vector3(quad.end.x,      water_level, quad.position.y)
+	var c = Vector3(quad.position.x, water_level, quad.end.y)
+	var d = Vector3(quad.end.x,      water_level, quad.end.y)
 
-	surfTool.add_vertex(a)
-	surfTool.add_vertex(d)
-	surfTool.add_vertex(c)
+	draw_tri(surfTool, a, b, d)
+	draw_tri(surfTool, a, d, c)
+
+func draw_tri(surfTool, v1, v2, v3):
+	surfTool.add_vertex(v1)
+	surfTool.add_vertex(v2)
+	surfTool.add_vertex(v3)
 
 func get_grid_neighbours(h, diamond = false):
 	var neighbours = []
@@ -304,9 +364,8 @@ func priority_flood():
 				h.water_body_ind = next_ind
 				water_surfaces.append([h])
 				next_ind += 1
-				
 		
-		spread_surface_edges_into_terrain(surface, h)
+#		spread_surface_edges_into_terrain(surface, h)
 		h = surface.pop_back()
 
 	print("next_ind: " + str(next_ind))
