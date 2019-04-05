@@ -207,6 +207,19 @@ func set_height_features(x_h_grid, z_h_grid):
 			vertex_grid[z][x].set_y(corner.height)
 			vertex_grid[z][x].set_water_height(corner.water_height)
 
+func spread_surface_edges_into_terrain(surface):
+	pass
+	var body_ind = surface.front().water_body_ind
+	var water_height = surface.front().water_height
+	# Spread the surface to the neighbouring points
+	var surf = surface.duplicate()
+	for h in surf:
+		for n in get_grid_neighbours(h):
+			if not n.water_body_ind and n.height >= water_height:
+				# Append to the surface
+				n.water_body_ind = body_ind
+				surface.append(n)
+
 func create_water_display_features(surface, surfTool):
 	# Find a rectangle that contains all the points in the surface
 	var grid_bounds = Rect2(surface.front().grid_x, surface.front().grid_z, 0, 0)
@@ -221,11 +234,6 @@ func create_water_display_features(surface, surfTool):
 			grid_bounds.end.y = h.grid_z
 	
 	var water_level = surface.front().water_height - 0.5
-	
-#	# TEMP DEBUG: draw the dirty big rectangle
-#	var bounds = get_world_bounds_from_grid_bounds(grid_bounds)
-#	draw_level_quad(surfTool, bounds, water_level)
-
 	# Go through each possible quad within the surface bounds and draw all complete quads and partial tris
 	for z in range(grid_bounds.position.y, grid_bounds.end.y):
 		for x in range(grid_bounds.position.x, grid_bounds.end.x):
@@ -301,6 +309,10 @@ func draw_tri(surfTool, v1, v2, v3):
 	surfTool.add_vertex(v1)
 	surfTool.add_vertex(v2)
 	surfTool.add_vertex(v3)
+	# Draw double sided
+	surfTool.add_vertex(v1)
+	surfTool.add_vertex(v3)
+	surfTool.add_vertex(v2)
 
 func get_grid_neighbours(h, diamond = false):
 	var neighbours = []
@@ -365,7 +377,6 @@ func priority_flood():
 				water_surfaces.append([h])
 				next_ind += 1
 		
-#		spread_surface_edges_into_terrain(surface, h)
 		h = surface.pop_back()
 
 	print("next_ind: " + str(next_ind))
@@ -402,18 +413,6 @@ func get_any_adjoining_index(h):
 				ind = n.water_body_ind
 	return ind
 
-func spread_surface_edges_into_terrain(surface, h):
-	# Spread the surface to the neighbouring points
-	for n in get_grid_neighbours(h):
-		if n.water_height > h.water_height:
-			n.water_height = h.water_height
-			# TODO: setting the index should maybe be internal to the height class
-			n.water_body_ind = h.water_body_ind
-			water_surfaces[h.water_body_ind].append(n)
-		if not n.levelled and n.water_height > n.height:
-			n.levelled = true
-			surface.push_back(n)
-
 func generate_mesh(h_offset):
 
 	set_height_features(h_offset.x, h_offset.y)
@@ -448,6 +447,7 @@ func generate_water_meshes():
 		waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
 		waterSurface.add_color(Color(0.0, surf_step * surf_ind, 1.0, 0.25))
 		
+		spread_surface_edges_into_terrain(surface)
 		create_water_display_features(surface, waterSurface)
 
 		waterSurface.generate_normals()
