@@ -208,17 +208,21 @@ func set_height_features(x_h_grid, z_h_grid):
 			vertex_grid[z][x].set_water_height(corner.water_height)
 
 func spread_surface_edges_into_terrain(surface):
-	pass
 	var body_ind = surface.front().water_body_ind
 	var water_height = surface.front().water_height
+	var flood_height
 	# Spread the surface to the neighbouring points
 	var surf = surface.duplicate()
 	for h in surf:
 		for n in get_grid_neighbours(h):
 			if not n.water_body_ind and n.height >= water_height:
+				flood_height = min(flood_height, n.height) if flood_height else n.height
 				# Append to the surface
 				n.water_body_ind = body_ind
 				surface.append(n)
+#	# Flood the whole surface (raise to the flood height)
+#	for h in surface:
+#		h.water_height = flood_height
 
 func create_water_display_features(surface, surfTool):
 	# Find a rectangle that contains all the points in the surface

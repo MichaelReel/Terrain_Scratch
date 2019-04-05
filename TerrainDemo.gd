@@ -12,6 +12,7 @@ export (Vector2) var chunks_grid = Vector2(8, 8)            # Size of the grid o
 export (ShaderMaterial) var chunk_material                  # Material put onto the "land" chunks
 export (bool) var force_generation = true                   # Remove generated files and force creation
 export (bool) var generate_colliders = false                # Set to add colliders for each chunk
+export (int) var init_seed = 2                              # Seed for the terrain height
 
 var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var total_grid = Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
@@ -79,7 +80,7 @@ func load_index():
 
 func update_terrain():
 	var shelf_limit = 11.0
-	graph = Graph.new(HeightHash.new(shelf_limit, 2), 1.0 / shelf_limit, total_grid)
+	graph = Graph.new(HeightHash.new(shelf_limit, init_seed), 1.0 / shelf_limit, total_grid)
 	index["HeightGrid"] = graph.height_grid
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()

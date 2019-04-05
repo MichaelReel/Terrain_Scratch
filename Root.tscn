@@ -24,6 +24,7 @@ material/0 = SubResource( 2 )
 script = ExtResource( 2 )
 chunk_material = ExtResource( 3 )
 generate_colliders = true
+init_seed = 3
 
 [node name="DirectionalLight" type="DirectionalLight" parent="."]
 transform = Transform( -1, 6.18173e-08, -6.18173e-08, 0, 0.707107, 0.707107, 8.74228e-08, 0.707107, -0.707107, 0, 0, 0 )
