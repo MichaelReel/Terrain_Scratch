@@ -26,8 +26,6 @@ class Quad:
 	var v1_z
 	var v2_x
 	var v2_z
-	
-	var water_level
 
 	func _init(vert1_x, vert1_z, vert2_x, vert2_z):
 		v1_x = vert1_x
@@ -81,7 +79,7 @@ class Height:
 	var grid_z
 	var parent
 	
-	var bed_rock_precision = 64 # Magic number
+	var bed_rock_precision = 128.0 # Magic number
 
 	var water_height
 	var water_body_ind
@@ -200,12 +198,24 @@ func generate_height_values():
 	priority_flood()
 
 func set_height_features(x_h_grid, z_h_grid):
-
 	for z in range(len(vertex_grid)):
 		for x in range(len(vertex_grid[z])):
 			var corner = height_grid[z_h_grid + z][x_h_grid + x]
 			vertex_grid[z][x].set_y(corner.height)
 			vertex_grid[z][x].set_water_height(corner.water_height)
+
+func spread_surface_edges(surface):
+	var body_ind = surface.front().water_body_ind
+	var water_height = surface.front().water_height
+	# Spread the surface to the neighbouring points
+	for h in surface:
+		for n in get_grid_neighbours(h, true):
+			if not n.water_body_ind and n.height < water_height:
+				# Modify water height
+				n.water_height = water_height
+				# Append to the surface
+				n.water_body_ind = body_ind
+				surface.append(n)
 
 func spread_surface_edges_into_terrain(surface):
 	var body_ind = surface.front().water_body_ind
@@ -220,9 +230,9 @@ func spread_surface_edges_into_terrain(surface):
 				# Append to the surface
 				n.water_body_ind = body_ind
 				surface.append(n)
-#	# Flood the whole surface (raise to the flood height)
-#	for h in surface:
-#		h.water_height = flood_height
+	# Flood the whole surface (raise to the flood height)
+	for h in surface:
+		h.water_height = flood_height
 
 func create_water_display_features(surface, surfTool):
 	# Find a rectangle that contains all the points in the surface
@@ -241,9 +251,8 @@ func create_water_display_features(surface, surfTool):
 	# Go through each possible quad within the surface bounds and draw all complete quads and partial tris
 	for z in range(grid_bounds.position.y, grid_bounds.end.y):
 		for x in range(grid_bounds.position.x, grid_bounds.end.x):
-			var score = get_surface_occupancy_score(surface, z, x, surface.front().water_body_ind)
+			var score = get_surface_occupancy_score(z, x, surface.front().water_body_ind)
 			# We only care about drawing 5 posible scores
-			# TODO: Also want to make a list of edge vertices
 			match score:
 				15: # Full quad
 					draw_level_quad(surfTool, get_world_bounds_from_grid_bounds(Rect2(x, z, 1, 1)), water_level)
@@ -276,7 +285,7 @@ func create_water_display_features(surface, surfTool):
 						get_level_vert(Vector2(x, z + 1), water_level)
 					)
 			
-func get_surface_occupancy_score(surface, z, x, water_body_ind):
+func get_surface_occupancy_score(z, x, water_body_ind):
 	var score = 0
 	# Assuming all surface features will have the same water height
 	score += 1 if height_grid[z][x].water_body_ind == water_body_ind else 0
@@ -370,7 +379,7 @@ func priority_flood():
 	while h:
 		if not h.water_body_ind:
 			# If an adjoining point has an index, use that
-			var adj_ind = get_any_adjoining_index(h)
+			var adj_ind = get_and_merge_any_adjoining_index(h)
 			if adj_ind:
 				# Use existing index
 				h.water_body_ind = adj_ind
@@ -383,10 +392,9 @@ func priority_flood():
 		
 		h = surface.pop_back()
 
-	print("next_ind: " + str(next_ind))
+	print("surfaces before tidy: " + str(next_ind))
 	tidy_empty_water_surfaces()
-	
-	print("surfaces merged: " + str(len(water_surfaces)))
+	print("surfaces after tidy: " + str(len(water_surfaces)))
 
 func tidy_empty_water_surfaces():
 	var new_water_surfaces = []
@@ -401,21 +409,24 @@ func tidy_empty_water_surfaces():
 			new_ind += 1
 	water_surfaces = new_water_surfaces
 
-func get_any_adjoining_index(h):
+func get_and_merge_any_adjoining_index(h):
 	var ind = null
 	for n in get_grid_neighbours(h):
 		if n.water_body_ind:
 			if ind and n.water_body_ind != ind:
 				# 2 body indexes have met, need to merge
-				var moving_ind = n.water_body_ind
-				for mover in water_surfaces[moving_ind]:
-					mover.water_body_ind = ind
-				water_surfaces[ind] += water_surfaces[moving_ind]
-				water_surfaces[moving_ind] = []
+				merge_surfaces(ind , n.water_body_ind)
 			else:
 				# We found an index (or the same index)
 				ind = n.water_body_ind
 	return ind
+
+func merge_surfaces(invader_ind, annexed_ind):
+	# 2 body indexes have met, need to merge
+	for mover in water_surfaces[annexed_ind]:
+		mover.water_body_ind = invader_ind
+	water_surfaces[invader_ind] += water_surfaces[annexed_ind]
+	water_surfaces[annexed_ind] = []
 
 func generate_mesh(h_offset):
 
@@ -451,6 +462,7 @@ func generate_water_meshes():
 		waterSurface.begin(Mesh.PRIMITIVE_TRIANGLES)
 		waterSurface.add_color(Color(0.0, surf_step * surf_ind, 1.0, 0.25))
 		
+		spread_surface_edges(surface)
 		spread_surface_edges_into_terrain(surface)
 		create_water_display_features(surface, waterSurface)
 
