@@ -8,9 +8,20 @@
 
 config_version=4
 
-_global_script_classes=[  ]
+_global_script_classes=[ {
+"base": "Object",
+"class": "Graph",
+"language": "GDScript",
+"path": "res://Graph.gd"
+}, {
+"base": "Object",
+"class": "HeightHash",
+"language": "GDScript",
+"path": "res://HeightHash.gd"
+} ]
 _global_script_class_icons={
-
+"Graph": "",
+"HeightHash": ""
 }
 
 [application]
@@ -18,6 +29,13 @@ _global_script_class_icons={
 config/name="Terrain Scratch"
 run/main_scene="res://Root.tscn"
 config/icon="res://icon.png"
+
+[debug]
+
+gdscript/warnings/unsafe_property_access=true
+gdscript/warnings/unsafe_method_access=true
+gdscript/warnings/unsafe_cast=true
+gdscript/warnings/unsafe_call_argument=true
 
 [input]
 

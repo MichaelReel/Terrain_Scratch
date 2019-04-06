@@ -1,22 +1,22 @@
 extends MeshInstance
 
-var Graph = load("res://Graph.gd")
-var HeightHash = load("res://HeightHash.gd")
+#var Graph = load("res://Graph.gd")
+#var HeightHash = load("res://HeightHash.gd")
 
-var terrain_path = "TerrainDemo"
-var save_dir
-var index
+var terrain_path := "TerrainDemo"
+var save_dir     : Directory
+var index        : Dictionary
 
-export (Vector2) var chunk_resolution = Vector2(32.0, 32.0) # The number of points across the grid
-export (Vector2) var chunks_grid = Vector2(8, 8)            # Size of the grid of chunks
-export (ShaderMaterial) var chunk_material                  # Material put onto the "land" chunks
-export (bool) var force_generation = true                   # Remove generated files and force creation
-export (bool) var generate_colliders = false                # Set to add colliders for each chunk
-export (int) var init_seed = 2                              # Seed for the terrain height
+export (Vector2) var chunk_resolution = Vector2(32, 32) # The number of points across the grid
+export (Vector2) var chunks_grid = Vector2(8, 8)        # Size of the grid of chunks
+export (ShaderMaterial) var chunk_material              # Material put onto the "land" chunks
+export (bool) var force_generation = true               # Remove generated files and force creation
+export (bool) var generate_colliders = false            # Set to add colliders for each chunk
+export (int) var init_seed = 2                          # Seed for the terrain height
 
-var chunk_size = Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
-var total_grid = Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
-var graph                                                   # Used to generate meshes
+var chunk_size := Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
+var total_grid := Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
+var graph      : Graph                                      # Used to generate meshes
 
 
 func _ready():
@@ -36,10 +36,13 @@ func prepare_storage():
 	save_dir = Directory.new()
 	if save_dir.file_exists(save_dir_path):
 		print ("Found existing terrain directory")
+		#warning-ignore:return_value_discarded
 		save_dir.open(save_dir_path)
 	else:
 		print ("Making new terrain directory")
+		#warning-ignore:return_value_discarded
 		save_dir.make_dir_recursive(save_dir_path)
+		#warning-ignore:return_value_discarded
 		save_dir.open(save_dir_path)
 
 func remove_all_files():
@@ -114,7 +117,7 @@ func update_terrain():
 	if rmax > cmax:
 		print ("real max height is: " + str(rmax) + ", current: " + str(cmax))
 
-func generate_chunk(x, z):
+func generate_chunk(x : int, z : int) -> MeshInstance:
 
 	# Get position from generation offset
 	var x_offset = x * chunk_size.x
@@ -138,7 +141,7 @@ func create_colliders():
 		# Clearly, this needs to be created by more "manual" means
 		chunk.create_trimesh_collision()
 		
-func load_chunk(chunk_name, surface_tool):
+func load_chunk(chunk_name : String, surface_tool : SurfaceTool) -> MeshInstance:
 	
 	# Prepare mesh
 	var chunk = MeshInstance.new()
@@ -189,6 +192,7 @@ func load_chunk(chunk_name, surface_tool):
 			surface_tool.add_vertex(vertices[vertex_ind])
 	surface_tool.generate_normals()
 
+	#warning-ignore:return_value_discarded
 	surface_tool.commit(mesh)
 	chunk_file.close()
 	chunk.set_mesh(mesh)
@@ -204,7 +208,7 @@ func save_chunks():
 			mesh_tool.clear()
 			save_chunk(chunk_name, mesh_tool)
 
-func save_chunk(chunk_name, mesh_tool):
+func save_chunk(chunk_name : String, mesh_tool : MeshDataTool):
 	var chunk = index["Chunks"][chunk_name]["data"]
 	index["Chunks"][chunk_name].erase("data")
 
@@ -214,6 +218,7 @@ func save_chunk(chunk_name, mesh_tool):
 	chunk_file.open(chunk_file_path, File.WRITE)
 
 	# Prepare to read mesh data
+	#warning-ignore:return_value_discarded
 	mesh_tool.create_from_surface(chunk.mesh, 0)
 
 	# Store translation

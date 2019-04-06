@@ -26,7 +26,7 @@ func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	set_process_input(true)
 
-func _physics_process(delta):
+func _physics_process(delta : float):
 	# Intended direction of movement
 	var dir = Vector3()
 
@@ -85,7 +85,7 @@ func _physics_process(delta):
 	# Slide the first body (kinematic) then move the other bodies to match the movement
 	vel = camera_control.move_and_slide(vel, Vector3(0,1,0), 5.0, 4, deg2rad(MAX_SLOPE_ANGLE))
 
-func _input(event):
+func _input(event : InputEvent):
 	if event.is_action_pressed("ui_cancel"):
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_VISIBLE:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -93,11 +93,12 @@ func _input(event):
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	
 	if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		var ev := event as InputEventMouseMotion
 		# Rotate camera holder on the X plane given changes to the Y mouse position (Vertical)
-		camera_holder.rotate_x(deg2rad(event.relative.y * MOUSE_SENSITIVITY * -1))
+		camera_holder.rotate_x(deg2rad(ev.relative.y * MOUSE_SENSITIVITY * -1))
 		
 		# Rotate cameras on the Y plane given changes to the X mouse position (Horizontal)
-		camera_control.rotate_y(deg2rad(event.relative.x * MOUSE_SENSITIVITY * -1))
+		camera_control.rotate_y(deg2rad(ev.relative.x * MOUSE_SENSITIVITY * -1))
 	
 		# Clamp the vertical look to +- 70 because we don't do back flips or tumbles
 		var camera_rot = camera_holder.rotation_degrees
