@@ -1,19 +1,15 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://trans_outline.shader" type="Shader" id=1]
 [ext_resource path="res://TerrainDemo.gd" type="Script" id=2]
 [ext_resource path="res://Land.material" type="Material" id=3]
-[ext_resource path="res://CameraControl.gd" type="Script" id=4]
+[ext_resource path="res://camera/flying.tscn" type="PackedScene" id=4]
 
 [sub_resource type="PlaneMesh" id=1]
 size = Vector2( 1, 1 )
 
 [sub_resource type="ShaderMaterial" id=2]
 shader = ExtResource( 1 )
-
-[sub_resource type="CapsuleShape" id=3]
-radius = 2.0
-height = 2.0
 
 [node name="Root" type="Spatial"]
 
@@ -30,16 +26,6 @@ init_seed = 3
 transform = Transform( -1, 6.18173e-08, -6.18173e-08, 0, 0.707107, 0.707107, 8.74228e-08, 0.707107, -0.707107, 0, 0, 0 )
 light_color = Color( 0.974685, 0.976563, 0.736237, 1 )
 
-[node name="CameraControl" type="KinematicBody" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 128, 0 )
-script = ExtResource( 4 )
-
-[node name="CameraMount" type="Spatial" parent="CameraControl"]
-
-[node name="Camera" type="Camera" parent="CameraControl/CameraMount"]
-far = 1024.0
-
-[node name="CollisionShape" type="CollisionShape" parent="CameraControl"]
-transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0 )
-shape = SubResource( 3 )
+[node name="FlyingCamera" parent="." instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 150, 0 )
 
