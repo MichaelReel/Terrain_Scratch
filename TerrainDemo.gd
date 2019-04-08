@@ -16,7 +16,7 @@ export (int) var init_seed = 2                          # Seed for the terrain h
 
 var chunk_size := Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var total_grid := Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
-var graph      : Graph                                      # Used to generate meshes
+var graph      : BaseTerrain                            # Used to generate meshes
 
 
 func _ready():
@@ -83,7 +83,7 @@ func load_index():
 
 func update_terrain():
 	var shelf_limit = 11.0
-	graph = Graph.new(HeightHash.new(shelf_limit, init_seed), 1.0 / shelf_limit, total_grid)
+	graph = BaseTerrain.new(HeightHash.new(shelf_limit, init_seed), 1.0 / shelf_limit, total_grid)
 	index["HeightGrid"] = graph.height_grid
 	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
 	var surface_tool = SurfaceTool.new()
@@ -106,16 +106,6 @@ func update_terrain():
 		pool.material_override = chunk_material
 		index["Water"].append(pool)
 		add_child(pool)
-	
-	# Some debug relating to shader ranges:
-	var cmin = graph.min_height
-	var cmax = graph.max_height
-	var rmin = graph.real_min_height
-	var rmax = graph.real_max_height
-	if rmin < cmin:
-		print ("real min height is: " + str(rmin) + ", current: " + str(cmin))
-	if rmax > cmax:
-		print ("real max height is: " + str(rmax) + ", current: " + str(cmax))
 
 func generate_chunk(x : int, z : int) -> MeshInstance:
 

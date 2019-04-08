@@ -9,19 +9,43 @@
 config_version=4
 
 _global_script_classes=[ {
-"base": "Object",
-"class": "Graph",
+"base": "Node",
+"class": "BaseGrid",
 "language": "GDScript",
-"path": "res://Graph.gd"
+"path": "res://graph/BaseGrid.gd"
+}, {
+"base": "Node",
+"class": "BaseHeight",
+"language": "GDScript",
+"path": "res://graph/BaseHeight.gd"
+}, {
+"base": "Object",
+"class": "BaseTerrain",
+"language": "GDScript",
+"path": "res://graph/BaseTerrain.gd"
 }, {
 "base": "Object",
 "class": "HeightHash",
 "language": "GDScript",
 "path": "res://HeightHash.gd"
+}, {
+"base": "Node",
+"class": "WaterGrid",
+"language": "GDScript",
+"path": "res://graph/WaterGrid.gd"
+}, {
+"base": "Node",
+"class": "WaterHeight",
+"language": "GDScript",
+"path": "res://graph/WaterHeight.gd"
 } ]
 _global_script_class_icons={
-"Graph": "",
-"HeightHash": ""
+"BaseGrid": "",
+"BaseHeight": "",
+"BaseTerrain": "",
+"HeightHash": "",
+"WaterGrid": "",
+"WaterHeight": ""
 }
 
 [application]
