@@ -10,6 +10,7 @@ var index        : Dictionary
 export (Vector2) var chunk_resolution = Vector2(32, 32) # The number of points across the grid
 export (Vector2) var chunks_grid = Vector2(8, 8)        # Size of the grid of chunks
 export (ShaderMaterial) var chunk_material              # Material put onto the "land" chunks
+export (ShaderMaterial) var water_material              # Material put onto the "land" chunks
 export (bool) var force_generation = true               # Remove generated files and force creation
 export (bool) var generate_colliders = false            # Set to add colliders for each chunk
 export (int) var init_seed = 2                          # Seed for the terrain height
@@ -104,7 +105,7 @@ func update_terrain():
 	for surface in water_tool.generate_water_meshes(graph):
 		var pool = MeshInstance.new()
 		pool.set_mesh(surface)
-		pool.material_override = chunk_material
+		pool.material_override = water_material
 		index["Water"].append(pool)
 		add_child(pool)
 
