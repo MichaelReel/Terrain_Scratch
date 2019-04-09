@@ -85,7 +85,8 @@ func update_terrain():
 	var shelf_limit = 11.0
 	graph = BaseTerrain.new(HeightHash.new(shelf_limit, init_seed), 1.0 / shelf_limit, total_grid)
 	index["HeightGrid"] = graph.height_grid
-	graph.create_base_square_grid(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
+	var terrain_tool := MeshTerrainTool.new(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
+	var water_tool := MeshWaterTool.new()
 	var surface_tool = SurfaceTool.new()
 
 	for z in range(chunks_grid.y):
@@ -96,18 +97,18 @@ func update_terrain():
 				index["Chunks"][chunk_name]["data"] = load_chunk(chunk_name, surface_tool)
 			else:
 				index["Chunks"][chunk_name] = {}
-				index["Chunks"][chunk_name]["data"] = generate_chunk(x, z)
+				index["Chunks"][chunk_name]["data"] = generate_chunk(terrain_tool, x, z)
 			add_child(index["Chunks"][chunk_name]["data"])
 	
 	# TODO: need to selectively load water meshes, assuming intention to keep chunking
-	for surface in graph.generate_water_meshes():
+	for surface in water_tool.generate_water_meshes(graph):
 		var pool = MeshInstance.new()
 		pool.set_mesh(surface)
 		pool.material_override = chunk_material
 		index["Water"].append(pool)
 		add_child(pool)
 
-func generate_chunk(x : int, z : int) -> MeshInstance:
+func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInstance:
 
 	# Get position from generation offset
 	var x_offset = x * chunk_size.x
@@ -117,7 +118,7 @@ func generate_chunk(x : int, z : int) -> MeshInstance:
 
 	# Create and return the chunk mesh
 	var chunk = MeshInstance.new()
-	chunk.set_mesh(graph.generate_mesh(grid_offset))
+	chunk.set_mesh(terrain_tool.generate_mesh(grid_offset, graph))
 	chunk.material_override = chunk_material
 	chunk.translation = offset
 	return chunk
@@ -192,13 +193,13 @@ func load_chunk(chunk_name : String, surface_tool : SurfaceTool) -> MeshInstance
 	return chunk
 
 func save_chunks():
-	var mesh_tool = MeshDataTool.new()
+	var mesh_data_tool = MeshDataTool.new()
 	for chunk_name in index["Chunks"].keys():
 		if not index["Chunks"][chunk_name].has("file"):
-			mesh_tool.clear()
-			save_chunk(chunk_name, mesh_tool)
+			mesh_data_tool.clear()
+			save_chunk(chunk_name, mesh_data_tool)
 
-func save_chunk(chunk_name : String, mesh_tool : MeshDataTool):
+func save_chunk(chunk_name : String, mesh_data_tool : MeshDataTool):
 	var chunk = index["Chunks"][chunk_name]["data"]
 	index["Chunks"][chunk_name].erase("data")
 
@@ -209,7 +210,7 @@ func save_chunk(chunk_name : String, mesh_tool : MeshDataTool):
 
 	# Prepare to read mesh data
 	#warning-ignore:return_value_discarded
-	mesh_tool.create_from_surface(chunk.mesh, 0)
+	mesh_data_tool.create_from_surface(chunk.mesh, 0)
 
 	# Store translation
 	chunk_file.store_float(chunk.translation.x)
@@ -217,29 +218,29 @@ func save_chunk(chunk_name : String, mesh_tool : MeshDataTool):
 	chunk_file.store_float(chunk.translation.z)
 
 	# Store vertices
-	var vertex_count = mesh_tool.get_vertex_count()
+	var vertex_count = mesh_data_tool.get_vertex_count()
 	chunk_file.store_32(vertex_count)
 	for vertex_ind in range(vertex_count):
 
 		# Store vertex position
-		var vertex = mesh_tool.get_vertex(vertex_ind)
+		var vertex = mesh_data_tool.get_vertex(vertex_ind)
 		chunk_file.store_float(vertex.x)
 		chunk_file.store_float(vertex.y)
 		chunk_file.store_float(vertex.z)
 
 		# Store vertex colour
-		var color = mesh_tool.get_vertex_color(vertex_ind)
+		var color = mesh_data_tool.get_vertex_color(vertex_ind)
 		chunk_file.store_float(color.r)
 		chunk_file.store_float(color.g)
 		chunk_file.store_float(color.b)
 		chunk_file.store_float(color.a)
 
 	# Store polygons
-	var face_count = mesh_tool.get_face_count()
+	var face_count = mesh_data_tool.get_face_count()
 	chunk_file.store_32(face_count)
 	for face_ind in range(face_count):
 		for fv_ind in range(3):
-			var vert_ind = mesh_tool.get_face_vertex(face_ind, fv_ind)
+			var vert_ind = mesh_data_tool.get_face_vertex(face_ind, fv_ind)
 			chunk_file.store_32(vert_ind)
 		
 	chunk_file.close()
