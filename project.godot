@@ -50,14 +50,14 @@ _global_script_classes=[ {
 "path": "res://mesh/MeshWaterTool.gd"
 }, {
 "base": "Node",
-"class": "WaterGrid",
-"language": "GDScript",
-"path": "res://graph/water/WaterGrid.gd"
-}, {
-"base": "Node",
 "class": "WaterHeight",
 "language": "GDScript",
 "path": "res://graph/water/WaterHeight.gd"
+}, {
+"base": "Node",
+"class": "WaterPoolGrid",
+"language": "GDScript",
+"path": "res://graph/water/WaterPoolGrid.gd"
 } ]
 _global_script_class_icons={
 "BaseGrid": "",
@@ -68,8 +68,8 @@ _global_script_class_icons={
 "MeshQuad": "",
 "MeshTerrainTool": "",
 "MeshWaterTool": "",
-"WaterGrid": "",
-"WaterHeight": ""
+"WaterHeight": "",
+"WaterPoolGrid": ""
 }
 
 [application]

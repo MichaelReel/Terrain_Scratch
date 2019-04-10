@@ -9,14 +9,19 @@ var water_body_ind : int
 var levelled       : bool
 var base_height    : BaseHeight
 var closed         : bool
+var flow_link      : WaterHeight
 
 func _init(bh : BaseHeight):
 	base_height = bh
 	levelled = false
+	water_height = bh.height
 
-func calc_start_water_height(min_sea_level):
+func height() -> float:
+	return base_height.height 
+
+func calc_water_height(min_level):
 	# Water should be the min water height higher
-	water_height = floor(max(min_sea_level, base_height.height) * BED_ROCK_PRECISION) / BED_ROCK_PRECISION
+	water_height = floor(max(min_level, water_height) * BED_ROCK_PRECISION) / BED_ROCK_PRECISION
 
 class Sorter:
 	static func y_sort(a : WaterHeight, b : WaterHeight) -> bool:
@@ -25,4 +30,3 @@ class Sorter:
 func place_height_in_list(list : Array):
 	var h_ind := list.bsearch_custom(self, Sorter, "y_sort")
 	list.insert(h_ind, self)
-	closed = true

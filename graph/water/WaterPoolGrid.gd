@@ -1,10 +1,11 @@
 extends Node
 
-class_name WaterGrid
+class_name WaterPoolGrid
 
 var base_grid       : BaseGrid
 var water_grid      : Array # The fullset of height values across the grid
 var water_surfaces  := []   # Each 'body' of water after flooding algorithm completed
+var peaks           := []
 
 func _init(bg : BaseGrid):
 	base_grid = bg
@@ -26,48 +27,70 @@ func get_grid_neighbours(wh : WaterHeight, diamond := false):
 	var z = wh.base_height.grid_z
 	var x = wh.base_height.grid_x
 	if x > 0:
-		neighbours.append(water_grid[z][x - 1])
+		neighbours.append(get_height(x - 1, z))
 		if not diamond and z > 0:
-			neighbours.append(water_grid[z - 1][x - 1])
+			neighbours.append(get_height(x - 1, z - 1))
 		if not diamond and z < len(water_grid) - 1:
-			neighbours.append(water_grid[z + 1][x - 1])
+			neighbours.append(get_height(x - 1, z + 1))
 	if z > 0:
-		neighbours.append(water_grid[z - 1][x])
+		neighbours.append(get_height(x, z - 1))
 	if x < len(water_grid[0]) - 1:
-		neighbours.append(water_grid[z][x + 1])
+		neighbours.append(get_height(x + 1, z))
 		if not diamond and z > 0:
-			neighbours.append(water_grid[z - 1][x + 1])
+			neighbours.append(get_height(x + 1, z - 1))
 		if not diamond and z < len(water_grid) - 1:
-			neighbours.append(water_grid[z + 1][x + 1])
+			neighbours.append(get_height(x + 1, z + 1))
 	if z < len(water_grid) - 1:
-		neighbours.append(water_grid[z + 1][x])
+		neighbours.append(get_height(x, z + 1))
 	return neighbours
 
 func priority_flood(min_sea_level):
 	var queue := []
 	var surface := []
 
-	# Add all edge heights to queue
+	# Add all edge heights to queue at 'sea' level
+	var wh : WaterHeight
 	for z in range(len(water_grid)):
+		for x in [0, len(water_grid[z]) - 1]:
+			wh = get_height(x, z)
+			wh.calc_water_height(min_sea_level)
+			wh.place_height_in_list(queue)
+			wh.closed = true
+	for z in [0, len(water_grid) - 1]:
 		for x in range(len(water_grid[z])):
-			if z <= 0 or x <= 0 or z >= len(water_grid) - 1 or x >= len(water_grid[z]) -1:
-				water_grid[z][x].calc_start_water_height(min_sea_level)
-				water_grid[z][x].place_height_in_list(queue)
+			wh = get_height(x, z)
+			wh.calc_water_height(min_sea_level)
+			wh.place_height_in_list(queue)
+			wh.closed = true
 	
+	# Need a really high point to compare everything against
+	var top_link := WaterHeight.new(BaseHeight.new(0,0))
+	top_link.base_height.height = 1e20
 	# Take each queued point and process it
 	while not queue.empty():
-		var wh : WaterHeight = queue.pop_back()
+		wh = queue.pop_back()
+		var flow_link = top_link
 		# Set up the neighbours for processing
 		for n in get_grid_neighbours(wh, true):
-			if n.closed: continue
-			n.calc_start_water_height(min_sea_level)
-			n.water_height = max(wh.water_height, n.water_height)
-			n.place_height_in_list(queue)
+			# Link the current height to the next highest neighbour
+			if  wh.height() < n.height() and  n.height() < flow_link.height():
+				flow_link = n
+			# If neighbour already visited, skip it
+			if not n.closed: 
+				n.calc_water_height(wh.water_height)
+				n.place_height_in_list(queue)
+				n.closed = true
 		# If the current water height is higher than the terrain
-		if wh.water_height > wh.base_height.height:
+		if wh.water_height > wh.height():
 			# Add to the surface
 			wh.levelled = true
 			surface.append(wh)
+		# Find peaks and mark the probable flow of water
+		if flow_link == top_link:
+			if wh.water_height <= wh.height():
+				peaks.append(wh)
+		else:
+			wh.flow_link = flow_link
 
 	# Take each surface point and level out the water around it
 	var h : WaterHeight = surface.pop_back()

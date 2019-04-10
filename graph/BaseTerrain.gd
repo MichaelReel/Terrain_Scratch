@@ -8,7 +8,7 @@ var scale           : float
 var world_width     : int   # The total width of the terrain
 var world_breadth   : int   # The total breadth of the terrain
 var height_grid     : BaseGrid
-var water_grid      : WaterGrid
+var water_grid      : WaterPoolGrid
 
 func _init(ht : HeightHash, s : float, world_size : Vector2):
 	hash_tool     = ht
@@ -21,7 +21,7 @@ func _init(ht : HeightHash, s : float, world_size : Vector2):
 	height_grid.generate_height_values(hash_tool)
 
 	# Use the highest edge tile as the min water level
-	water_grid = WaterGrid.new(height_grid)
+	water_grid = WaterPoolGrid.new(height_grid)
 	water_grid.priority_flood(height_grid.highest_edge)
 
 func get_world_bounds_from_grid_bounds(grid_bounds : Rect2) -> Rect2:
