@@ -14,6 +14,13 @@ func _init(bg : BaseGrid):
 func get_height(x : int, z : int) -> WaterHeight:
 	return (water_grid[z][x] as WaterHeight)
 
+func get_all_heights() -> Array:
+	# Not super efficient, but shouldn't be called often
+	var all_heights := []
+	for row in water_grid:
+		all_heights += row
+	return all_heights
+
 func setup_2d_water_array(width : int, breadth : int) -> Array:
 	var rows := []
 	for z in range(breadth):
@@ -63,18 +70,11 @@ func priority_flood(min_sea_level):
 			wh.place_height_in_list(queue)
 			wh.closed = true
 	
-	# Need a really high point to compare everything against
-	var top_link := WaterHeight.new(BaseHeight.new(0,0))
-	top_link.base_height.height = 1e20
 	# Take each queued point and process it
 	while not queue.empty():
 		wh = queue.pop_back()
-		var flow_link = top_link
 		# Set up the neighbours for processing
 		for n in get_grid_neighbours(wh, true):
-			# Link the current height to the next highest neighbour
-			if  wh.height() < n.height() and  n.height() < flow_link.height():
-				flow_link = n
 			# If neighbour already visited, skip it
 			if not n.closed: 
 				n.calc_water_height(wh.water_height)
@@ -85,12 +85,22 @@ func priority_flood(min_sea_level):
 			# Add to the surface
 			wh.levelled = true
 			surface.append(wh)
-		# Find peaks and mark the probable flow of water
-		if flow_link == top_link:
+			
+		# Link the current height to the lowest neighbour
+		var up_link = wh
+		var down_link = wh
+		for n in get_grid_neighbours(wh, false):
+			if n.height() < down_link.height():
+				down_link = n
+			if n.height() > up_link.height():
+				up_link = n
+		# Find peaks
+		if up_link == wh:
 			if wh.water_height <= wh.height():
 				peaks.append(wh)
-		else:
-			wh.flow_link = flow_link
+		# Mark the probable flow of water
+		if down_link != wh:
+			wh.flow_link = down_link
 
 	# Take each surface point and level out the water around it
 	var h : WaterHeight = surface.pop_back()

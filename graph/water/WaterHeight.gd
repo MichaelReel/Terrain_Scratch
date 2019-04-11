@@ -17,7 +17,10 @@ func _init(bh : BaseHeight):
 	water_height = bh.height
 
 func height() -> float:
-	return base_height.height 
+	return base_height.height
+
+func get_grid_vector2() -> Vector2:
+	return Vector2(base_height.grid_x, base_height.grid_z)
 
 func calc_water_height(min_level):
 	# Water should be the min water height higher

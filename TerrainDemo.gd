@@ -110,19 +110,22 @@ func update_terrain():
 		index["Water"].append(pool)
 		add_child(pool)
 		
-	# Add markers at all the peaks
-	var marker_scale = Vector3(0.01, 0.05, 0.01) # TODO: make less magical
+	# DEBUG: Add markers at all the peaks
+	var marker_scale := Vector3(0.01, 0.05, 0.01) # TODO: make less magical
 	for peak in graph.water_grid.peaks:
-		var offset = Vector3(
-			(peak.base_height.grid_x - (total_grid.x / 2.0)) / total_grid.x,
-			peak.height() - 0.5,
-			(peak.base_height.grid_z - (total_grid.y / 2.0)) / total_grid.y
-		)
-		var mark = MeshInstance.new()
+		var offset = graph.get_level_vert(peak.get_grid_vector2(), peak.height())
+		var mark := MeshInstance.new()
 		mark.global_translate(offset)
 		mark.scale_object_local(marker_scale)
 		mark.set_mesh(marker)
 		add_child(mark)
+	
+	# DEBUG: Draw water link map
+	var water_flow_map := MeshInstance.new()
+	water_flow_map.set_mesh(water_tool.generate_complete_link_map(graph))
+	water_flow_map.material_override = water_material
+	add_child(water_flow_map)
+	
 
 func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInstance:
 

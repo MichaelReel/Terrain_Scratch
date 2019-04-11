@@ -35,6 +35,6 @@ func get_world_bounds_from_grid_bounds(grid_bounds : Rect2) -> Rect2:
 func get_level_vert(grid_position : Vector2, water_level : float) -> Vector3:
 	return Vector3(
 		(grid_position.x - (world_width / 2.0)) / world_width,
-		water_level,
+		water_level - 0.5,
 		(grid_position.y - (world_width / 2.0)) / world_width
 	)
