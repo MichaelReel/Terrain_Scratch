@@ -10,11 +10,13 @@ var levelled       : bool
 var base_height    : BaseHeight
 var closed         : bool
 var flow_link      : WaterHeight
+var water_score    : int
 
 func _init(bh : BaseHeight):
 	base_height = bh
 	levelled = false
 	water_height = bh.height
+	water_score = 0
 
 func height() -> float:
 	return base_height.height

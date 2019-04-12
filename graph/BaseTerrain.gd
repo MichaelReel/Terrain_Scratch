@@ -23,6 +23,7 @@ func _init(ht : HeightHash, s : float, world_size : Vector2):
 	# Use the highest edge tile as the min water level
 	water_grid = WaterPoolGrid.new(height_grid)
 	water_grid.priority_flood(height_grid.highest_edge)
+	water_grid.water_flow()
 
 func get_world_bounds_from_grid_bounds(grid_bounds : Rect2) -> Rect2:
 	return Rect2(

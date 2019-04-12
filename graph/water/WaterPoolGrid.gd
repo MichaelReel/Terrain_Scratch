@@ -51,6 +51,35 @@ func get_grid_neighbours(wh : WaterHeight, diamond := false):
 		neighbours.append(get_height(x, z + 1))
 	return neighbours
 
+func water_flow():
+	# Take each queued point and process it
+	for wh in get_all_heights():
+		# Link the current height to the lowest neighbour
+		var up_link = wh
+		var down_link = wh
+		for n in get_grid_neighbours(wh, false):
+			if n.height() < down_link.height():
+				down_link = n
+			if n.height() > up_link.height():
+				up_link = n
+		# Find peaks
+		if up_link == wh:
+			if wh.water_height <= wh.height():
+				peaks.append(wh)
+		# Mark the probable flow of water
+		if down_link != wh:
+			wh.flow_link = down_link
+	
+	# Go over each grid point and update it's link's score
+	for wh in get_all_heights():
+		if wh.flow_link:
+			wh.flow_link.water_score += 1
+	
+	# Go over each grid point again and remove underscoring and underwater links
+	for wh in get_all_heights():
+		if wh.water_score <= 2 or wh.water_height > wh.height():
+			wh.water_score = 0
+
 func priority_flood(min_sea_level):
 	var queue := []
 	var surface := []
@@ -85,24 +114,8 @@ func priority_flood(min_sea_level):
 			# Add to the surface
 			wh.levelled = true
 			surface.append(wh)
-			
-		# Link the current height to the lowest neighbour
-		var up_link = wh
-		var down_link = wh
-		for n in get_grid_neighbours(wh, false):
-			if n.height() < down_link.height():
-				down_link = n
-			if n.height() > up_link.height():
-				up_link = n
-		# Find peaks
-		if up_link == wh:
-			if wh.water_height <= wh.height():
-				peaks.append(wh)
-		# Mark the probable flow of water
-		if down_link != wh:
-			wh.flow_link = down_link
-
-	# Take each surface point and level out the water around it
+	
+	# Take each surface point, give it an index and link it to a surface
 	var h : WaterHeight = surface.pop_back()
 	var next_ind := 0
 	while h:
@@ -118,7 +131,6 @@ func priority_flood(min_sea_level):
 				h.water_body_ind = next_ind
 				water_surfaces.append([h])
 				next_ind += 1
-		
 		h = surface.pop_back()
 
 	print("surfaces before tidy: " + str(next_ind))

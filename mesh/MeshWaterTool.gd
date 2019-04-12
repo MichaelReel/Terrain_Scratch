@@ -114,7 +114,7 @@ func generate_complete_link_map(terrain: BaseTerrain) -> Mesh:
 	
 	var water_grid := terrain.water_grid
 	for wh in water_grid.get_all_heights():
-		if wh.flow_link:
+		if wh.flow_link and wh.water_score > 0:
 			var vec1 := terrain.get_level_vert(wh.get_grid_vector2(), wh.height())
 			var vec2 := terrain.get_level_vert(wh.flow_link.get_grid_vector2(), wh.flow_link.height())
 			var vec3 := vec2 + Vector3(0, 0.01, 0)
