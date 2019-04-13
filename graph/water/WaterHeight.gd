@@ -11,6 +11,8 @@ var base_height    : BaseHeight
 var closed         : bool
 var flow_link      : WaterHeight
 var water_score    : int
+var flow_visited   : bool
+var flow_ind       : int
 
 func _init(bh : BaseHeight):
 	base_height = bh
@@ -21,10 +23,13 @@ func _init(bh : BaseHeight):
 func height() -> float:
 	return base_height.height
 
+func under_water() -> bool:
+	return water_height > height()
+
 func get_grid_vector2() -> Vector2:
 	return Vector2(base_height.grid_x, base_height.grid_z)
 
-func calc_water_height(min_level):
+func calc_water_height(min_level : float):
 	# Water should be the min water height higher
 	water_height = floor(max(min_level, water_height) * BED_ROCK_PRECISION) / BED_ROCK_PRECISION
 

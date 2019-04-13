@@ -121,10 +121,11 @@ func update_terrain():
 		add_child(mark)
 	
 	# DEBUG: Draw water link map
-	var water_flow_map := MeshInstance.new()
-	water_flow_map.set_mesh(water_tool.generate_complete_link_map(graph))
-	water_flow_map.material_override = water_material
-	add_child(water_flow_map)
+	for flow_mesh in water_tool.generate_complete_link_map(graph):
+		var water_flow_map := MeshInstance.new()
+		water_flow_map.set_mesh(flow_mesh)
+		water_flow_map.material_override = chunk_material
+		add_child(water_flow_map)
 	
 
 func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInstance:

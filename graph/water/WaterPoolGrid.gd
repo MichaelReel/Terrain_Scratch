@@ -6,6 +6,7 @@ var base_grid       : BaseGrid
 var water_grid      : Array # The fullset of height values across the grid
 var water_surfaces  := []   # Each 'body' of water after flooding algorithm completed
 var peaks           := []
+var rivers          := []
 
 func _init(bg : BaseGrid):
 	base_grid = bg
@@ -76,9 +77,59 @@ func water_flow():
 			wh.flow_link.water_score += 1
 	
 	# Go over each grid point again and remove underscoring and underwater links
+	# (The underwater link stripping will only work if flooding has been completed)
 	for wh in get_all_heights():
-		if wh.water_score <= 2 or wh.water_height > wh.height():
+		if wh.water_score <= 2 or wh.under_water():
 			wh.water_score = 0
+	
+	# Create the river flows and group rivers
+	# Start by parsing each grid point
+	var flow_ind : int = 0
+	rivers.append([])
+	for wh in get_all_heights():
+		if wh.water_score > 0 and not wh.flow_visited:
+			# Determine flow to the nearest pool or sink
+			while wh and not wh.flow_visited and not wh.under_water():
+				wh.flow_ind = flow_ind
+				wh.flow_visited = true
+				rivers[flow_ind].append(wh)
+				wh = wh.flow_link
+			flow_ind += 1
+			rivers.append([])
+	
+	# The last node in the river might connect to the start of another river
+	for river in rivers:
+		if river.empty(): continue
+		var back : WaterHeight = river.back()
+		var link : WaterHeight = back.flow_link
+		if link and link.flow_ind and link.flow_ind != back.flow_ind:
+			if rivers[link.flow_ind].front() == link:
+				# Merge rivers
+				for wh in rivers[link.flow_ind]:
+					wh.flow_ind = back.flow_ind
+					river.append(wh)
+				rivers[link.flow_ind] = []
+	
+	# Strip out the empty rivers
+	print("rivers before tidy: " + str(len(rivers)))
+	tidy_empty_river_surfaces()
+	print("rivers after tidy: " + str(len(rivers)))
+
+func tidy_empty_river_surfaces():
+	var new_rivers := []
+	var new_ind := 0
+	# remove empty rows and re-align indices
+	while not rivers.empty():
+		var river : Array = rivers.pop_front()
+		if not river.empty() and river.front().flow_link:
+			for wh in river:
+				wh.flow_ind = new_ind
+			new_rivers.append(river)
+			# Remove the last node if it doesn't flow anywhere
+			if not river.back().flow_link:
+				river.pop_back()
+			new_ind += 1
+	rivers = new_rivers
 
 func priority_flood(min_sea_level):
 	var queue := []
@@ -110,7 +161,7 @@ func priority_flood(min_sea_level):
 				n.place_height_in_list(queue)
 				n.closed = true
 		# If the current water height is higher than the terrain
-		if wh.water_height > wh.height():
+		if wh.under_water():
 			# Add to the surface
 			wh.levelled = true
 			surface.append(wh)

@@ -106,20 +106,27 @@ func generate_water_meshes(terrain: BaseTerrain) -> Array:
 	
 	return water_meshes
 
-func generate_complete_link_map(terrain: BaseTerrain) -> Mesh:
-	var mesh := Mesh.new()
-	var water_surface := SurfaceTool.new()
-	water_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	water_surface.add_color(Color(0.0, 0.0, 1.0, 1.0))
-	
-	var water_grid := terrain.water_grid
-	for wh in water_grid.get_all_heights():
-		if wh.flow_link and wh.water_score > 0:
+func generate_complete_link_map(terrain: BaseTerrain) -> Array:
+	var flow_meshes := []
+
+	var flow_ind := 0
+	var flow_step := 1.0 / len(terrain.water_grid.rivers)
+	while flow_ind < len(terrain.water_grid.rivers):
+		var mesh := Mesh.new()
+		var water_surface := SurfaceTool.new()
+		water_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		water_surface.add_color(Color(flow_step * flow_ind, 0.0, 0.0, 1.0))
+		
+		var river : Array = terrain.water_grid.rivers[flow_ind]
+		for wh in river:
 			var vec1 := terrain.get_level_vert(wh.get_grid_vector2(), wh.height())
 			var vec2 := terrain.get_level_vert(wh.flow_link.get_grid_vector2(), wh.flow_link.height())
 			var vec3 := vec2 + Vector3(0, 0.01, 0)
 			draw_tri(water_surface, vec1, vec2, vec3)
-	water_surface.generate_normals()
-	water_surface.commit(mesh)
+		flow_ind += 1
+
+		water_surface.generate_normals()
+		water_surface.commit(mesh)
+		flow_meshes.append(mesh)
 	
-	return mesh
+	return flow_meshes
