@@ -5,6 +5,7 @@ class_name WaterFlowGrid
 var water_grid      : Array # The fullset of height values across the grid
 var peaks           := []
 var rivers          := []
+var sinks           := []
 
 func _init(bg : BaseGrid):
 	water_grid = setup_2d_water_array(bg)
@@ -69,45 +70,55 @@ func water_flow():
 		# Mark the probable flow of water
 		if down_link != wh:
 			wh.flow_link = down_link
+		else:
+			sinks.append(wh)
 	
-	# Go over each grid point and update it's link's score
-	for wh in get_all_heights():
-		if wh.flow_link:
-			wh.flow_link.water_score += 1
+#	# Go over each grid point and update it's link's score
+#	for wh in get_all_heights():
+#		if wh.flow_link:
+#			wh.flow_link.water_score += 1
 	
-	# Go over each grid point again and remove underscoring and underwater links
-	# (The underwater link stripping will only work if flooding has been completed)
-	for wh in get_all_heights():
-		if wh.water_score <= 0 or wh.under_water():
-			wh.water_score = 0
+#	# Go over each grid point again and remove underscoring and underwater links
+#	# (The underwater link stripping will only work if flooding has been completed)
+#	for wh in get_all_heights():
+#		if wh.water_score <= 0 or wh.under_water():
+#			wh.water_score = 0
 	
 	# Create the river flows and group rivers
 	# Start by parsing each grid point
 	var flow_ind : int = 0
+	
 	rivers.append([])
 	for wh in get_all_heights():
-		if wh.water_score > 0 and not wh.flow_visited:
-			# Determine flow to the nearest pool or sink
-			while wh and not wh.flow_visited and not wh.under_water():
-				wh.flow_ind = flow_ind
-				wh.flow_visited = true
-				rivers[flow_ind].append(wh)
-				wh = wh.flow_link
-			flow_ind += 1
-			rivers.append([])
+		# Determine flow to the nearest pool or sink
+		while wh and not wh.flow_visited and not wh.under_water():
+			wh.flow_ind = flow_ind
+			wh.flow_visited = true
+			rivers[flow_ind].append(wh)
+			wh = wh.flow_link
+		flow_ind += 1
+		rivers.append([])
 	
 	# The last node in the river might connect to the start of another river
 	for river in rivers:
 		if river.empty(): continue
-		var back : WaterHeight = river.back()
-		var link : WaterHeight = back.flow_link
-		if link and link.flow_ind and link.flow_ind != back.flow_ind:
-			if rivers[link.flow_ind].front() == link:
-				# Merge rivers
-				for wh in rivers[link.flow_ind]:
-					wh.flow_ind = back.flow_ind
+		var tail : WaterHeight = river.back()
+		var link : WaterHeight = tail.flow_link
+		if link and link.flow_ind and link.flow_ind != tail.flow_ind:
+			var link_river : Array = rivers[link.flow_ind]
+			var link_head : WaterHeight = link_river.front()
+			if link_head == link:
+				# Extend current river
+				var wh = link_river.pop_front()
+				while wh:
+					wh.flow_ind = tail.flow_ind
 					river.append(wh)
-				rivers[link.flow_ind] = []
+					wh = link_river.pop_front()
+			else:
+				# This is a tributary, add to the main flow
+				while link:
+					link.water_score += 1
+					link = link.flow_link
 	
 	# Strip out the empty rivers
 	print("rivers before tidy: " + str(len(rivers)))

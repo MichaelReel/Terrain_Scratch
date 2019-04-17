@@ -119,6 +119,15 @@ func update_terrain():
 		mark.scale_object_local(marker_scale)
 		mark.set_mesh(marker)
 		add_child(mark)
+		
+	# DEBUG: Add markers at all the sinks
+	for sink in graph.flow_grid.sinks:
+		var offset = graph.get_level_vert(sink.get_grid_vector2(), sink.height())
+		var mark := MeshInstance.new()
+		mark.global_translate(offset)
+		mark.scale_object_local(marker_scale)
+		mark.set_mesh(marker)
+		add_child(mark)
 	
 	# DEBUG: Draw water link map
 	for flow_mesh in water_tool.generate_complete_link_map(graph):
