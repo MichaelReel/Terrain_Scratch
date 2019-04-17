@@ -2,15 +2,13 @@ extends Node
 
 class_name WaterPoolGrid
 
-var base_grid       : BaseGrid
 var water_grid      : Array # The fullset of height values across the grid
 var water_surfaces  := []   # Each 'body' of water after flooding algorithm completed
 var peaks           := []
 var rivers          := []
 
 func _init(bg : BaseGrid):
-	base_grid = bg
-	water_grid = setup_2d_water_array(base_grid.world_width + 1, base_grid.world_breadth + 1)
+	water_grid = setup_2d_water_array(bg)
 
 func get_height(x : int, z : int) -> WaterHeight:
 	return (water_grid[z][x] as WaterHeight)
@@ -22,7 +20,9 @@ func get_all_heights() -> Array:
 		all_heights += row
 	return all_heights
 
-func setup_2d_water_array(width : int, breadth : int) -> Array:
+func setup_2d_water_array(base_grid : BaseGrid) -> Array:
+	var width : int = base_grid.world_width + 1
+	var breadth : int = base_grid.world_breadth + 1
 	var rows := []
 	for z in range(breadth):
 		rows.append([])
@@ -79,7 +79,7 @@ func water_flow():
 	# Go over each grid point again and remove underscoring and underwater links
 	# (The underwater link stripping will only work if flooding has been completed)
 	for wh in get_all_heights():
-		if wh.water_score <= 2 or wh.under_water():
+		if wh.water_score <= 0 or wh.under_water():
 			wh.water_score = 0
 	
 	# Create the river flows and group rivers

@@ -108,6 +108,7 @@ func generate_water_meshes(terrain: BaseTerrain) -> Array:
 
 func generate_complete_link_map(terrain: BaseTerrain) -> Array:
 	var flow_meshes := []
+	var color = Color(0.0, 0.0, 0.0, 1.0)
 
 	var flow_ind := 0
 	var flow_step := 1.0 / len(terrain.water_grid.rivers)
@@ -115,7 +116,10 @@ func generate_complete_link_map(terrain: BaseTerrain) -> Array:
 		var mesh := Mesh.new()
 		var water_surface := SurfaceTool.new()
 		water_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-		water_surface.add_color(Color(flow_step * flow_ind, 0.0, 0.0, 1.0))
+		color.r = randf()
+		color.g = randf()
+		color.b = randf()
+		water_surface.add_color(color)
 		
 		var river : Array = terrain.water_grid.rivers[flow_ind]
 		for wh in river:
