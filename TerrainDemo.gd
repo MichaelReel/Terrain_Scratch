@@ -112,7 +112,7 @@ func update_terrain():
 		
 	# DEBUG: Add markers at all the peaks
 	var marker_scale := Vector3(0.01, 0.05, 0.01) # TODO: make less magical
-	for peak in graph.water_grid.peaks:
+	for peak in graph.flow_grid.peaks:
 		var offset = graph.get_level_vert(peak.get_grid_vector2(), peak.height())
 		var mark := MeshInstance.new()
 		mark.global_translate(offset)

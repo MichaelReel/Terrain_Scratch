@@ -43,9 +43,7 @@ func set_height_features(x_h_grid : int, z_h_grid : int, terrain : BaseTerrain):
 	for z in range(len(vertex_grid)):
 		for x in range(len(vertex_grid[z])):
 			var bh : BaseHeight  = terrain.height_grid.get_height(x_h_grid + x, z_h_grid + z)
-			var wh : WaterHeight = terrain.water_grid.get_height(x_h_grid + x, z_h_grid + z)
 			vertex_grid[z][x].set_y(bh.height)
-			vertex_grid[z][x].set_water_height(wh.water_height)
 
 	min_height = terrain.height_grid.real_min_height
 

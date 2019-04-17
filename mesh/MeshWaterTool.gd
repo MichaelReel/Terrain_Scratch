@@ -56,10 +56,10 @@ func create_water_display_features(surface : Array, surfTool : SurfaceTool, terr
 func get_surface_occupancy_score(z : int, x : int, water_body_ind : int, terrain : BaseTerrain) -> int:
 	var score : int = 0
 	# Assuming all surface features will have the same water height
-	score += 1 if terrain.water_grid.get_height(x    , z    ).water_body_ind == water_body_ind else 0
-	score += 2 if terrain.water_grid.get_height(x + 1, z    ).water_body_ind == water_body_ind else 0
-	score += 4 if terrain.water_grid.get_height(x    , z + 1).water_body_ind == water_body_ind else 0
-	score += 8 if terrain.water_grid.get_height(x + 1, z + 1).water_body_ind == water_body_ind else 0
+	score += 1 if terrain.pool_grid.get_height(x    , z    ).water_body_ind == water_body_ind else 0
+	score += 2 if terrain.pool_grid.get_height(x + 1, z    ).water_body_ind == water_body_ind else 0
+	score += 4 if terrain.pool_grid.get_height(x    , z + 1).water_body_ind == water_body_ind else 0
+	score += 8 if terrain.pool_grid.get_height(x + 1, z + 1).water_body_ind == water_body_ind else 0
 	return score
 
 func draw_level_quad(surfTool : SurfaceTool, quad : Rect2, water_level : float):
@@ -88,8 +88,8 @@ func generate_water_meshes(terrain: BaseTerrain) -> Array:
 	#       Alternatively, drop the whole chunking thing and just generate everything in one big lump, at least at this level
 	
 	var surf_ind := 0
-	var surf_step := 1.0 / len(terrain.water_grid.water_surfaces)
-	for surface in terrain.water_grid.water_surfaces:
+	var surf_step := 1.0 / len(terrain.pool_grid.water_surfaces)
+	for surface in terrain.pool_grid.water_surfaces:
 		var mesh := Mesh.new()
 		var water_surface := SurfaceTool.new()
 		
@@ -111,8 +111,8 @@ func generate_complete_link_map(terrain: BaseTerrain) -> Array:
 	var color = Color(0.0, 0.0, 0.0, 1.0)
 
 	var flow_ind := 0
-	var flow_step := 1.0 / len(terrain.water_grid.rivers)
-	while flow_ind < len(terrain.water_grid.rivers):
+	var flow_step := 1.0 / len(terrain.flow_grid.rivers)
+	while flow_ind < len(terrain.flow_grid.rivers):
 		var mesh := Mesh.new()
 		var water_surface := SurfaceTool.new()
 		water_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -121,7 +121,7 @@ func generate_complete_link_map(terrain: BaseTerrain) -> Array:
 		color.b = randf()
 		water_surface.add_color(color)
 		
-		var river : Array = terrain.water_grid.rivers[flow_ind]
+		var river : Array = terrain.flow_grid.rivers[flow_ind]
 		for wh in river:
 			var vec1 := terrain.get_level_vert(wh.get_grid_vector2(), wh.height())
 			var vec2 := terrain.get_level_vert(wh.flow_link.get_grid_vector2(), wh.flow_link.height())
