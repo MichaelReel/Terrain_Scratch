@@ -20,6 +20,8 @@ input_name = "color"
 
 [sub_resource type="VisualShader" id=5]
 code = "shader_type spatial;
+render_mode specular_schlick_ggx, async_visible;
+
 uniform float ScalarUniform;
 
 
@@ -31,12 +33,10 @@ void vertex() {
 
 void fragment() {
 // Input:3
-	vec3 n_out3p0;
-	n_out3p0 = COLOR.rgb;
+	vec3 n_out3p0 = COLOR.rgb;
 
 // ScalarUniform:2
-	float n_out2p0;
-	n_out2p0 = ScalarUniform;
+	float n_out2p0 = ScalarUniform;
 
 // Output:0
 	ALBEDO = n_out3p0;
@@ -67,6 +67,7 @@ transform = Transform( 1024, 0, 0, 0, 128, 0, 0, 0, 1024, 0, 0, 0 )
 mesh = SubResource( 1 )
 material/0 = SubResource( 2 )
 script = ExtResource( 2 )
+chunks_grid = Vector2( 4, 4 )
 chunk_material = ExtResource( 3 )
 water_material = SubResource( 6 )
 generate_colliders = true
@@ -79,4 +80,3 @@ light_color = Color( 0.974685, 0.976563, 0.736237, 1 )
 
 [node name="FlyingCamera" parent="." instance=ExtResource( 5 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 150, 0 )
-

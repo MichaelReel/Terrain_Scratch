@@ -107,9 +107,9 @@ func priority_flood(min_sea_level):
 	tidy_empty_water_surfaces()
 	print("surfaces after tidy: " + str(len(water_surfaces)))
 	
-	for surface in water_surfaces:
-		spread_surface_edges(surface)
-		spread_surface_edges_into_terrain(surface)
+	for water_surface in water_surfaces:
+		spread_surface_edges(water_surface)
+		spread_surface_edges_into_terrain(water_surface)
 
 func get_and_merge_any_adjoining_index(wh : WaterHeight):
 	var ind = null # Inspecific about return type as may be int or null
