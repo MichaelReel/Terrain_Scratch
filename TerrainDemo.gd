@@ -137,23 +137,23 @@ func update_terrain():
 	var marker_scale := Vector3(0.01, 0.05, 0.01) # TODO: make less magical
 	print("marking peaks " + str(Time.get_ticks_usec()))
 	for peak in graph.flow_grid.peaks:
-		var offset = graph.get_level_vert(peak.get_grid_vector2(), peak.height())
+		var offset = graph.get_global_position(peak.get_grid_vector2(), peak.height())
 		var mark := MeshInstance.new()
 		mark.set_mesh(marker)
+		add_child(mark)
 		mark.global_translate(offset)
 		mark.scale_object_local(marker_scale)
-		add_child(mark)
-		
+
 	# DEBUG: Add markers at all the sinks
 	print("marking sinks " + str(Time.get_ticks_usec()))
 	for sink in graph.flow_grid.sinks:
-		var offset = graph.get_level_vert(sink.get_grid_vector2(), sink.height())
+		var offset = graph.get_global_position(sink.get_grid_vector2(), sink.height())
 		var mark := MeshInstance.new()
-		mark.global_translate(offset)
-		mark.scale_object_local(marker_scale)
 		mark.set_mesh(marker)
 		add_child(mark)
-	
+		mark.global_translate(offset)
+		mark.scale_object_local(marker_scale)
+
 	# DEBUG: Draw water link map
 	print("drawing water links " + str(Time.get_ticks_usec()))
 	for flow_mesh in water_tool.generate_complete_link_map(graph):
