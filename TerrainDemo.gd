@@ -20,17 +20,32 @@ var chunk_size := Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var total_grid := Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
 var graph      : BaseTerrain                            # Used to generate meshes
 
+var thread : Thread
 
-func _ready():
+func _ready() -> void:
+	thread = Thread.new()
+	var _err = thread.start(self, "terrain_generation_or_loading")
+
+func _exit_tree():
+	thread.wait_to_finish()
+
+func terrain_generation_or_loading() -> void:
+	print("preping storage " + str(Time.get_ticks_usec()))
 	prepare_storage()
+	print("loading index " + str(Time.get_ticks_usec()))
 	load_index()
 	if force_generation:
+		print("forcing generation (removing files) " + str(Time.get_ticks_usec()))
 		remove_all_files()
+	print("updating the terrain " + str(Time.get_ticks_usec()))
 	update_terrain()
 	if generate_colliders:
+		print("creating colliders " + str(Time.get_ticks_usec()))
 		create_colliders()
 	if not force_generation:
+		print("saving chunks " + str(Time.get_ticks_usec()))
 		save_chunks()
+		print("saving index " + str(Time.get_ticks_usec()))
 		save_index()
 
 func prepare_storage():
@@ -39,13 +54,13 @@ func prepare_storage():
 	if save_dir.file_exists(save_dir_path):
 		print ("Found existing terrain directory")
 		#warning-ignore:return_value_discarded
-		save_dir.open(save_dir_path)
+		var _err = save_dir.open(save_dir_path)
 	else:
 		print ("Making new terrain directory")
 		#warning-ignore:return_value_discarded
-		save_dir.make_dir_recursive(save_dir_path)
+		var _err = save_dir.make_dir_recursive(save_dir_path)
 		#warning-ignore:return_value_discarded
-		save_dir.open(save_dir_path)
+		_err = save_dir.open(save_dir_path)
 
 func remove_all_files():
 	# This is more for debug than anything
@@ -85,12 +100,14 @@ func load_index():
 
 func update_terrain():
 	var shelf_limit = 11.0
+	print("create base terrain graph " + str(Time.get_ticks_usec()))
 	graph = BaseTerrain.new(HeightHash.new(shelf_limit, init_seed), 1.0 / shelf_limit, total_grid)
 	index["HeightGrid"] = graph.height_grid
+	print("create mesh terrain tool " + str(Time.get_ticks_usec()))
 	var terrain_tool := MeshTerrainTool.new(chunk_resolution.x, chunk_resolution.y, chunk_size.x, chunk_size.z)
-	var water_tool := MeshWaterTool.new()
 	var surface_tool = SurfaceTool.new()
 
+	
 	for z in range(chunks_grid.y):
 		for x in range(chunks_grid.x):
 			var chunk_name = str(x) + "_" + str(z)
@@ -99,11 +116,17 @@ func update_terrain():
 				index["Chunks"][chunk_name]["data"] = load_chunk(chunk_name, surface_tool)
 			else:
 				index["Chunks"][chunk_name] = {}
+				print("generating chunk (x:" + str(x) + " ,z:" + str(z) + ") " + str(Time.get_ticks_usec()))
 				index["Chunks"][chunk_name]["data"] = generate_chunk(terrain_tool, x, z)
+			print("adding chunk (x:" + str(x) + " ,z:" + str(z) + ") " + str(Time.get_ticks_usec()))
 			add_child(index["Chunks"][chunk_name]["data"])
+			
 	
 	# TODO: need to selectively load water meshes, assuming intention to keep chunking
-	for surface in water_tool.generate_water_meshes(graph):
+	var water_tool := MeshWaterTool.new()
+	print("generating water meshes")
+	var surfaces := water_tool.generate_water_meshes(graph)
+	for surface in surfaces:
 		var pool = MeshInstance.new()
 		pool.set_mesh(surface)
 		pool.material_override = water_material
@@ -112,15 +135,17 @@ func update_terrain():
 		
 	# DEBUG: Add markers at all the peaks
 	var marker_scale := Vector3(0.01, 0.05, 0.01) # TODO: make less magical
+	print("marking peaks " + str(Time.get_ticks_usec()))
 	for peak in graph.flow_grid.peaks:
 		var offset = graph.get_level_vert(peak.get_grid_vector2(), peak.height())
 		var mark := MeshInstance.new()
+		mark.set_mesh(marker)
 		mark.global_translate(offset)
 		mark.scale_object_local(marker_scale)
-		mark.set_mesh(marker)
 		add_child(mark)
 		
 	# DEBUG: Add markers at all the sinks
+	print("marking sinks " + str(Time.get_ticks_usec()))
 	for sink in graph.flow_grid.sinks:
 		var offset = graph.get_level_vert(sink.get_grid_vector2(), sink.height())
 		var mark := MeshInstance.new()
@@ -130,6 +155,7 @@ func update_terrain():
 		add_child(mark)
 	
 	# DEBUG: Draw water link map
+	print("drawing water links " + str(Time.get_ticks_usec()))
 	for flow_mesh in water_tool.generate_complete_link_map(graph):
 		var water_flow_map := MeshInstance.new()
 		water_flow_map.set_mesh(flow_mesh)

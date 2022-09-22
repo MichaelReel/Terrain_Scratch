@@ -15,7 +15,7 @@ func create_water_display_features(surface : Array, surfTool : SurfaceTool, terr
 		elif wh.base_height.grid_z > grid_bounds.end.y:
 			grid_bounds.end.y = wh.base_height.grid_z
 	
-	var water_level : float = surface.front().water_height - 0.5
+	var water_level : float = surface.front().water_height
 	# Go through each possible quad within the surface bounds and draw all complete quads and partial tris
 	for z in range(grid_bounds.position.y, grid_bounds.end.y):
 		for x in range(grid_bounds.position.x, grid_bounds.end.x):
@@ -23,7 +23,11 @@ func create_water_display_features(surface : Array, surfTool : SurfaceTool, terr
 			# We only care about drawing 5 posible scores
 			match score:
 				15: # Full quad
-					draw_level_quad(surfTool, terrain.get_world_bounds_from_grid_bounds(Rect2(x, z, 1, 1)), water_level)
+					draw_level_quad(
+						surfTool,
+						terrain.get_world_bounds_from_grid_bounds(Rect2(x, z, 1, 1)),
+						terrain.adjusted_water_level(water_level)
+					)
 				14: # B - D - C
 					draw_tri(
 						surfTool,

@@ -134,8 +134,7 @@ func tidy_empty_water_surfaces():
 	var new_water_surfaces := []
 	var new_ind := 0
 	# remove empty rows and re-align indices
-	while not water_surfaces.empty():
-		var surface : Array = water_surfaces.pop_front()
+	for surface in water_surfaces:
 		if not surface.empty():
 			for h in surface:
 				h.water_body_ind = new_ind
