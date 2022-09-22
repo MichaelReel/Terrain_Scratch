@@ -53,6 +53,7 @@ func get_grid_neighbours(wh : WaterHeight, diamond := false):
 	return neighbours
 
 func water_flow():
+	print("processing queued heights " + str(Time.get_ticks_usec()))
 	# Take each queued point and process it
 	for wh in get_all_heights():
 		# Link the current height to the lowest neighbour
@@ -88,6 +89,8 @@ func water_flow():
 	# Start by parsing each grid point
 	var flow_ind : int = 0
 	
+	print("generating river flows " + str(Time.get_ticks_usec()))
+	
 	rivers.append([])
 	for wh in get_all_heights():
 		# Determine flow to the nearest pool or sink
@@ -98,6 +101,8 @@ func water_flow():
 			wh = wh.flow_link
 		flow_ind += 1
 		rivers.append([])
+	
+	print("connecting river flows " + str(Time.get_ticks_usec()))
 	
 	# The last node in the river might connect to the start of another river
 	for river in rivers:
@@ -121,22 +126,21 @@ func water_flow():
 					link = link.flow_link
 	
 	# Strip out the empty rivers
-	print("rivers before tidy: " + str(len(rivers)))
+	print("rivers before tidy: " + str(len(rivers)) + " | " + str(Time.get_ticks_usec()))
 	tidy_empty_river_surfaces()
-	print("rivers after tidy: " + str(len(rivers)))
+	print("rivers after tidy: " + str(len(rivers)) + " | " + str(Time.get_ticks_usec()))
 
 func tidy_empty_river_surfaces():
 	var new_rivers := []
 	var new_ind := 0
 	# remove empty rows and re-align indices
-	while not rivers.empty():
-		var river : Array = rivers.pop_front()
+	for river in rivers:
 		if not river.empty() and river.front().flow_link:
 			for wh in river:
 				wh.flow_ind = new_ind
+				new_ind += 1
 			new_rivers.append(river)
 			# Remove the last node if it doesn't flow anywhere
 			if not river.back().flow_link:
 				river.pop_back()
-			new_ind += 1
 	rivers = new_rivers
