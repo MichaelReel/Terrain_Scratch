@@ -29,9 +29,9 @@ func _init(shelf_limit : float, rseed : int = 0):
 	#warning-ignore:return_value_discarded
 	randi() # Discard first rand as value tends to be low
 	island_limiter = ContinentalDome.new(shelf_limit)
-	amp_hash = OpenSimplexNoise.new()
+	amp_hash = FastNoiseLite.new()
 	amp_hash.seed = randi()
-	amp_hash.octaves = 4
+	amp_hash.fractal_octaves = 4
 	amp_hash.period = 7.0
 	amp_hash.persistence = 0.8
 

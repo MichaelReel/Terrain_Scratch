@@ -1,4 +1,4 @@
-extends Spatial
+extends Node3D
 
 var camera
 var camera_holder
@@ -18,7 +18,7 @@ const MAX_SLOPE_ANGLE = 89      # Steepest angle we can slide up
 func _ready():
 	camera_control = self
 	camera_holder = $CameraMount
-	camera        = $CameraMount/Camera
+	camera        = $CameraMount/Camera3D
 
 	cam_ref = weakref(camera)
 
@@ -33,7 +33,7 @@ func _physics_process(delta : float):
 	# Check camera hasn't been freed
 	# May not be necessary witout threading
 	if not cam_ref.get_ref():
-		camera  = $CameraMount/Camera
+		camera  = $CameraMount/Camera3D
 		cam_ref = weakref(camera)
 		return
 
@@ -76,14 +76,20 @@ func _physics_process(delta : float):
 		accel = DEACCEL
 
 	# Interpolate between the current (horizontal) velocity and the intended velocity
-	hvel = hvel.linear_interpolate(target, accel*delta)
+	hvel = hvel.lerp(target, accel*delta)
 	vel.x = hvel.x
 	vel.z = hvel.z
 	vel.y = hvel.y
 
 	# Use the KinematicBody to control physics movement
 	# Slide the first body (kinematic) then move the other bodies to match the movement
-	vel = camera_control.move_and_slide(vel, Vector3(0,1,0), 5.0, 4, deg2rad(MAX_SLOPE_ANGLE))
+	camera_control.set_velocity(vel)
+	camera_control.set_up_direction(Vector3(0,1,0))
+	camera_control.set_floor_stop_on_slope_enabled(5.0)
+	camera_control.set_max_slides(4)
+	camera_control.set_floor_max_angle(deg_to_rad(MAX_SLOPE_ANGLE))
+	camera_control.move_and_slide()
+	vel = camera_control.velocity
 
 func _input(event : InputEvent):
 	if event.is_action_pressed("ui_cancel"):
@@ -95,10 +101,10 @@ func _input(event : InputEvent):
 	if event is InputEventMouseMotion && Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		var ev := event as InputEventMouseMotion
 		# Rotate camera holder on the X plane given changes to the Y mouse position (Vertical)
-		camera_holder.rotate_x(deg2rad(ev.relative.y * MOUSE_SENSITIVITY * -1))
+		camera_holder.rotate_x(deg_to_rad(ev.relative.y * MOUSE_SENSITIVITY * -1))
 		
 		# Rotate cameras on the Y plane given changes to the X mouse position (Horizontal)
-		camera_control.rotate_y(deg2rad(ev.relative.x * MOUSE_SENSITIVITY * -1))
+		camera_control.rotate_y(deg_to_rad(ev.relative.x * MOUSE_SENSITIVITY * -1))
 	
 		# Clamp the vertical look to +- 70 because we don't do back flips or tumbles
 		var camera_rot = camera_holder.rotation_degrees

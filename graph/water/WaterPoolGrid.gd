@@ -70,7 +70,7 @@ func priority_flood(min_sea_level):
 			wh.closed = true
 	
 	# Take each queued point and process it
-	while not queue.empty():
+	while not queue.is_empty():
 		wh = queue.pop_back()
 		# Set up the neighbours for processing
 		for n in get_grid_neighbours(wh, true):
@@ -135,7 +135,7 @@ func tidy_empty_water_surfaces():
 	var new_ind := 0
 	# remove empty rows and re-align indices
 	for surface in water_surfaces:
-		if not surface.empty():
+		if not surface.is_empty():
 			for h in surface:
 				h.water_body_ind = new_ind
 			new_water_surfaces.append(surface)

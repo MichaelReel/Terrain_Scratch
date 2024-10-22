@@ -1,20 +1,20 @@
-extends MeshInstance
+extends MeshInstance3D
 
 #var Graph = load("res://Graph.gd")
 #var HeightHash = load("res://HeightHash.gd")
 
 var terrain_path := "TerrainDemo"
-var save_dir     : Directory
+var save_dir     : DirAccess
 var index        : Dictionary
 
-export (Vector2) var chunk_resolution = Vector2(32, 32) # The number of points across the grid
-export (Vector2) var chunks_grid = Vector2(8, 8)        # Size of the grid of chunks
-export (ShaderMaterial) var chunk_material              # Material put onto the "land" chunks
-export (ShaderMaterial) var water_material              # Material put onto the "land" chunks
-export (bool) var force_generation = true               # Remove generated files and force creation
-export (bool) var generate_colliders = false            # Set to add colliders for each chunk
-export (int) var init_seed = 2                          # Seed for the terrain height
-export (Mesh) var marker
+@export var chunk_resolution: Vector2 = Vector2(32, 32) # The number of points across the grid
+@export var chunks_grid: Vector2 = Vector2(8, 8)        # Size of the grid of chunks
+@export var chunk_material: ShaderMaterial              # Material put onto the "land" chunks
+@export var water_material: ShaderMaterial              # Material put onto the "land" chunks
+@export var force_generation: bool = true               # Remove generated files and force creation
+@export var generate_colliders: bool = false            # Set to add colliders for each chunk
+@export var init_seed: int = 2                          # Seed for the terrain height
+@export var marker: Mesh
 
 var chunk_size := Vector3(1.0 / chunks_grid.x, 0.0, 1.0 / chunks_grid.y)
 var total_grid := Vector2(chunk_resolution.x * chunks_grid.x, chunk_resolution.y * chunks_grid.y)
@@ -24,7 +24,7 @@ var thread : Thread
 
 func _ready() -> void:
 	thread = Thread.new()
-	var _err = thread.start(self, "terrain_generation_or_loading")
+	var _err = thread.start(Callable(self, "terrain_generation_or_loading"))
 
 func _exit_tree():
 	thread.wait_to_finish()
@@ -50,7 +50,7 @@ func terrain_generation_or_loading() -> void:
 
 func prepare_storage():
 	var save_dir_path = "user://" + terrain_path + "/"
-	save_dir = Directory.new()
+	save_dir = DirAccess.new()
 	if save_dir.file_exists(save_dir_path):
 		print ("Found existing terrain directory")
 		#warning-ignore:return_value_discarded
@@ -64,7 +64,7 @@ func prepare_storage():
 
 func remove_all_files():
 	# This is more for debug than anything
-	var dir = Directory.new()
+	var dir = DirAccess.new()
 	dir.remove(save_dir.get_current_dir() + "/index.json")
 	for chunk_name in index["Chunks"].keys():
 		if index["Chunks"][chunk_name].has("file"):
@@ -86,7 +86,9 @@ func load_index():
 
 	# File exists, try to load it
 	load_index.open(index_file, File.READ)
-	var result = JSON.parse(load_index.get_as_text())
+	var test_json_conv = JSON.new()
+	test_json_conv.parse(load_index.get_as_text())
+	var result = test_json_conv.get_data()
 
 	# If it can't be parsed - give up
 	if result.error:
@@ -127,7 +129,7 @@ func update_terrain():
 	print("generating water meshes")
 	var surfaces := water_tool.generate_water_meshes(graph)
 	for surface in surfaces:
-		var pool = MeshInstance.new()
+		var pool = MeshInstance3D.new()
 		pool.set_mesh(surface)
 		pool.material_override = water_material
 		index["Water"].append(pool)
@@ -138,7 +140,7 @@ func update_terrain():
 	print("marking peaks " + str(Time.get_ticks_usec()))
 	for peak in graph.flow_grid.peaks:
 		var offset = graph.get_global_position(peak.get_grid_vector2(), peak.height())
-		var mark := MeshInstance.new()
+		var mark := MeshInstance3D.new()
 		mark.set_mesh(marker)
 		add_child(mark)
 		mark.global_translate(offset)
@@ -148,7 +150,7 @@ func update_terrain():
 	print("marking sinks " + str(Time.get_ticks_usec()))
 	for sink in graph.flow_grid.sinks:
 		var offset = graph.get_global_position(sink.get_grid_vector2(), sink.height())
-		var mark := MeshInstance.new()
+		var mark := MeshInstance3D.new()
 		mark.set_mesh(marker)
 		add_child(mark)
 		mark.global_translate(offset)
@@ -157,13 +159,13 @@ func update_terrain():
 	# DEBUG: Draw water link map
 	print("drawing water links " + str(Time.get_ticks_usec()))
 	for flow_mesh in water_tool.generate_complete_link_map(graph):
-		var water_flow_map := MeshInstance.new()
+		var water_flow_map := MeshInstance3D.new()
 		water_flow_map.set_mesh(flow_mesh)
 		water_flow_map.material_override = chunk_material
 		add_child(water_flow_map)
 	
 
-func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInstance:
+func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInstance3D:
 
 	# Get position from generation offset
 	var x_offset = x * chunk_size.x
@@ -172,10 +174,10 @@ func generate_chunk(terrain_tool: MeshTerrainTool, x : int, z : int) -> MeshInst
 	var grid_offset = Vector2(x * chunk_resolution.x, z * chunk_resolution.y)
 
 	# Create and return the chunk mesh
-	var chunk = MeshInstance.new()
+	var chunk = MeshInstance3D.new()
 	chunk.set_mesh(terrain_tool.generate_mesh(grid_offset, graph))
 	chunk.material_override = chunk_material
-	chunk.translation = offset
+	chunk.position = offset
 	return chunk
 
 func create_colliders():
@@ -187,10 +189,10 @@ func create_colliders():
 		# Clearly, this needs to be created by more "manual" means
 		chunk.create_trimesh_collision()
 		
-func load_chunk(chunk_name : String, surface_tool : SurfaceTool) -> MeshInstance:
+func load_chunk(chunk_name : String, surface_tool : SurfaceTool) -> MeshInstance3D:
 	
 	# Prepare mesh
-	var chunk = MeshInstance.new()
+	var chunk = MeshInstance3D.new()
 	var mesh = Mesh.new()
 
 	# Prepare load file
@@ -243,7 +245,7 @@ func load_chunk(chunk_name : String, surface_tool : SurfaceTool) -> MeshInstance
 	chunk_file.close()
 	chunk.set_mesh(mesh)
 	chunk.material_override = chunk_material
-	chunk.translation = offset
+	chunk.position = offset
 
 	return chunk
 
@@ -268,9 +270,9 @@ func save_chunk(chunk_name : String, mesh_data_tool : MeshDataTool):
 	mesh_data_tool.create_from_surface(chunk.mesh, 0)
 
 	# Store translation
-	chunk_file.store_float(chunk.translation.x)
-	chunk_file.store_float(chunk.translation.y)
-	chunk_file.store_float(chunk.translation.z)
+	chunk_file.store_float(chunk.position.x)
+	chunk_file.store_float(chunk.position.y)
+	chunk_file.store_float(chunk.position.z)
 
 	# Store vertices
 	var vertex_count = mesh_data_tool.get_vertex_count()
@@ -305,5 +307,5 @@ func save_index():
 	var index_file = save_dir.get_current_dir() + "/index.json"
 	var save_index = File.new()
 	save_index.open(index_file, File.WRITE)
-	save_index.store_line(JSON.print(index,"    "))
+	save_index.store_line(JSON.stringify(index,"    "))
 	save_index.close()

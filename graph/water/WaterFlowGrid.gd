@@ -106,7 +106,7 @@ func water_flow():
 	
 	# The last node in the river might connect to the start of another river
 	for river in rivers:
-		if river.empty(): continue
+		if river.is_empty(): continue
 		var tail : WaterHeight = river.back()
 		var link : WaterHeight = tail.flow_link
 		if link and link.flow_ind and link.flow_ind != tail.flow_ind:
@@ -135,7 +135,7 @@ func tidy_empty_river_surfaces():
 	var new_ind := 0
 	# remove empty rows and re-align indices
 	for river in rivers:
-		if not river.empty() and river.front().flow_link:
+		if not river.is_empty() and river.front().flow_link:
 			for wh in river:
 				wh.flow_ind = new_ind
 				new_ind += 1
